@@ -22,6 +22,7 @@ export const Route = createFileRoute("/login")({
 function RouteComponent() {
   const { redirect } = Route.useSearch();
   const [mode, setMode] = useState<"sign-in" | "sign-up">("sign-in");
+  const [isAuthenticating, setIsAuthenticating] = useState(false);
   const returnTo = getSafeReturnTo(redirect);
 
   return (
@@ -35,20 +36,23 @@ function RouteComponent() {
             className="grid grid-cols-2 rounded-full bg-neutral-100 p-1"
             role="group"
             aria-label="Account access"
+            aria-busy={isAuthenticating}
           >
             <button
               type="button"
               aria-pressed={mode === "sign-in"}
+              disabled={isAuthenticating}
               onClick={() => setMode("sign-in")}
-              className="min-h-10 rounded-full px-3 text-base font-medium outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:min-h-8 sm:text-sm"
+              className="min-h-10 rounded-full px-3 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
             >
               Log in
             </button>
             <button
               type="button"
               aria-pressed={mode === "sign-up"}
+              disabled={isAuthenticating}
               onClick={() => setMode("sign-up")}
-              className="min-h-10 rounded-full px-3 text-base font-medium outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:min-h-8 sm:text-sm"
+              className="min-h-10 rounded-full px-3 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
             >
               Sign up
             </button>
@@ -56,9 +60,9 @@ function RouteComponent() {
         </div>
 
         {mode === "sign-in" ? (
-          <SignInForm returnTo={returnTo} />
+          <SignInForm returnTo={returnTo} onPendingChange={setIsAuthenticating} />
         ) : (
-          <SignUpForm returnTo={returnTo} />
+          <SignUpForm returnTo={returnTo} onPendingChange={setIsAuthenticating} />
         )}
       </div>
     </div>

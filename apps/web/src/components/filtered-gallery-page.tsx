@@ -1,3 +1,4 @@
+import { Skeleton } from "@art/ui/components/skeleton";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { Link } from "@tanstack/react-router";
 
@@ -59,6 +60,7 @@ export function FilteredGalleryPage({
         items={items}
         isLoading={artworksQuery.isPending}
         isError={artworksQuery.isError}
+        isRetrying={artworksQuery.isFetching}
         errorMessage={artworksQuery.error?.message}
         onRetry={() => void artworksQuery.refetch()}
         hasNextPage={artworksQuery.hasNextPage}
@@ -71,15 +73,18 @@ export function FilteredGalleryPage({
   );
 }
 
-export function FilteredGalleryPageSkeleton() {
+export function FilteredGalleryPageSkeleton({ filter }: { filter: "gallery" | "style" }) {
   return (
-    <div role="status" aria-label="Loading collection">
+    <div role="status" aria-busy="true" aria-live="polite">
+      <span className="sr-only">Loading collection</span>
       <div className="flex min-h-16 items-end justify-between gap-4 px-3 py-3">
-        <div className="h-7 w-48 max-w-2/3 animate-pulse rounded-full bg-neutral-100 motion-reduce:animate-none" />
-        <div className="h-5 w-24 animate-pulse rounded-full bg-neutral-100 motion-reduce:animate-none" />
+        <Skeleton className="h-7 w-48 max-w-2/3 rounded-full bg-neutral-100" />
+        {filter === "gallery" ? (
+          <Skeleton className="h-5 w-24 rounded-full bg-neutral-100" />
+        ) : null}
       </div>
       <div className="@container px-2 py-2 sm:px-3">
-        <GallerySkeleton />
+        <GallerySkeleton announce={false} />
       </div>
     </div>
   );

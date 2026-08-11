@@ -8,3 +8,19 @@ export async function loadValidatedBrowseData<T>(load: () => Promise<T>): Promis
     throw error;
   }
 }
+
+export async function loadBrowseRouteData<T>(
+  loadMetadata: () => Promise<T>,
+  loadArtworks: () => Promise<unknown>,
+): Promise<T | null> {
+  const [metadataResult, artworksResult] = await Promise.allSettled([
+    loadValidatedBrowseData(loadMetadata),
+    loadArtworks(),
+  ]);
+
+  if (metadataResult.status === "rejected") throw metadataResult.reason;
+  if (metadataResult.value === null) return null;
+  if (artworksResult.status === "rejected") throw artworksResult.reason;
+
+  return metadataResult.value;
+}

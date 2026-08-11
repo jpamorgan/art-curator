@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 
 import { ArtworkCard, getSafeAspectRatio, type ArtworkCardData } from "@/components/artwork-card";
 import { GallerySkeleton } from "@/components/gallery-skeleton";
+import { PendingButtonLabel } from "@/components/pending-button-label";
 import {
   GALLERY_GAP,
   GALLERY_GRID_CLASS_NAME,
@@ -17,6 +18,7 @@ export interface ArtGalleryProps {
   favoriteIds?: readonly string[];
   isLoading?: boolean;
   isError?: boolean;
+  isRetrying?: boolean;
   errorMessage?: string;
   onRetry?: () => void;
   hasNextPage?: boolean;
@@ -46,6 +48,7 @@ export function ArtGallery({
   favoriteIds,
   isLoading = false,
   isError = false,
+  isRetrying = false,
   errorMessage = "The gallery could not be loaded.",
   onRetry,
   hasNextPage = false,
@@ -130,10 +133,12 @@ export function ArtGallery({
         {onRetry ? (
           <button
             type="button"
-            className="min-h-10 rounded-full bg-neutral-950 px-3 text-base text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
+            aria-busy={isRetrying}
+            className="min-h-10 min-w-24 rounded-full bg-neutral-950 px-3 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-70 sm:text-sm"
+            disabled={isRetrying}
             onClick={onRetry}
           >
-            Try again
+            <PendingButtonLabel idle="Try again" pending="Retrying…" isPending={isRetrying} />
           </button>
         ) : null}
       </div>
@@ -153,7 +158,7 @@ export function ArtGallery({
   } as CSSProperties;
 
   return (
-    <div className="@container px-2 pt-2 pb-8 sm:px-3">
+    <div className="@container px-2 pt-2 pb-8 sm:px-3" aria-busy={isFetchingNextPage}>
       <div ref={setContainerElement} className="min-w-0">
         {!isMounted || containerWidth === 0 ? (
           <StaticGallery items={items} favoriteIds={favoriteIds} />
@@ -195,10 +200,10 @@ export function ArtGallery({
         )}
       </div>
 
-      <div ref={loadMoreRef} className="min-h-1" aria-live="polite">
+      <div ref={loadMoreRef} className="min-h-1">
         {isFetchingNextPage ? (
           <div className="pt-3">
-            <GallerySkeleton count={columns} />
+            <GallerySkeleton count={columns} label="Loading more artwork" />
           </div>
         ) : null}
         {isFetchNextPageError && fetchNextPage && !isFetchingNextPage ? (

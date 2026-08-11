@@ -128,3 +128,33 @@
     @apply font-sans;
   }
 }
+
+@keyframes skeleton-sheen {
+  from {
+    transform: translateX(-110%);
+  }
+
+  to {
+    transform: translateX(110%);
+  }
+}
+
+[data-slot="skeleton"]::after {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 68%) 50%, transparent 62%);
+  content: "";
+  transform: translateX(-110%);
+  animation: skeleton-sheen 1.8s cubic-bezier(0.2, 0, 0, 1) infinite;
+}
+
+.dark [data-slot="skeleton"]::after {
+  background: linear-gradient(105deg, transparent 38%, rgb(255 255 255 / 9%) 50%, transparent 62%);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  [data-slot="skeleton"]::after {
+    animation: none;
+    opacity: 0;
+  }
+}

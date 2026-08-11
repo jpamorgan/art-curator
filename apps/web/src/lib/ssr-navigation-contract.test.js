@@ -27,6 +27,44 @@ describe("SSR and hydrated navigation contract", () => {
     expect(routeSource.join("\n")).not.toMatch(/ssr\s*:\s*false/u);
   });
 
+  test("uses explicit pending timings that avoid flashes without making navigation feel stalled", async () => {
+    const routerSource = await readSource("router.tsx");
+
+    expect(routerSource).toContain("defaultPendingMs: 180");
+    expect(routerSource).toContain("defaultPendingMinMs: 280");
+  });
+
+  test("uses route-shaped pending surfaces for every data-backed destination", async () => {
+    const pendingContracts = [
+      ["routes/index.tsx", /pendingComponent:\s*GalleryPageSkeleton/u],
+      [
+        "routes/galleries.index.tsx",
+        /pendingComponent:\s*\(\)\s*=>\s*<BrowseIndexSkeleton\s+kind="galleries"\s*\/>/u,
+      ],
+      [
+        "routes/styles.index.tsx",
+        /pendingComponent:\s*\(\)\s*=>\s*<BrowseIndexSkeleton\s+kind="styles"\s*\/>/u,
+      ],
+      ["routes/_auth/favorites.tsx", /pendingComponent:\s*GalleryPageSkeleton/u],
+      [
+        "routes/galleries.$slug.tsx",
+        /pendingComponent:\s*\(\)\s*=>\s*<FilteredGalleryPageSkeleton\s+filter="gallery"\s*\/>/u,
+      ],
+      [
+        "routes/styles.$slug.tsx",
+        /pendingComponent:\s*\(\)\s*=>\s*<FilteredGalleryPageSkeleton\s+filter="style"\s*\/>/u,
+      ],
+      ["routes/art.$slug.tsx", /pendingComponent:\s*ArtworkDetailSkeleton/u],
+    ];
+
+    for (const [path, pendingComponentPattern] of pendingContracts) {
+      const routeSource = await readSource(path);
+
+      expect(routeSource).toMatch(pendingComponentPattern);
+      expect(routeSource).not.toMatch(/pendingComponent\s*:\s*(?:Loader|\(\)\s*=>\s*<Loader)/u);
+    }
+  });
+
   test("uses the TanStack Start shell boundary without duplicating the route match tree", async () => {
     const rootSource = await readSource("routes/__root.tsx");
     const artworkSource = await readSource("routes/art.$slug.tsx");
@@ -56,6 +94,19 @@ describe("SSR and hydrated navigation contract", () => {
     for (const routeSource of dataRoutes) {
       expect(routeSource).toMatch(/loader\s*:/u);
       expect(routeSource).toMatch(/ensure(?:Infinite)?QueryData/u);
+    }
+  });
+
+  test("loads collection metadata and artwork concurrently", async () => {
+    const collectionRoutes = await Promise.all(
+      ["routes/galleries.$slug.tsx", "routes/styles.$slug.tsx"].map(readSource),
+    );
+
+    for (const routeSource of collectionRoutes) {
+      expect(routeSource).toMatch(/loader:\s*async[\s\S]*?loadBrowseRouteData\(/u);
+      expect(routeSource).toMatch(
+        /loadBrowseRouteData\([\s\S]*?ensureQueryData[\s\S]*?ensureInfiniteQueryData/u,
+      );
     }
   });
 

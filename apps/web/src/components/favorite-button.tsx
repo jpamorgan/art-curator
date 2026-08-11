@@ -2,9 +2,10 @@ import { cn } from "@art/ui/lib/utils";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "@tanstack/react-router";
 import { Bookmark } from "lucide-react";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
 
+import { PendingButtonLabel } from "@/components/pending-button-label";
 import { authClient } from "@/lib/auth-client";
 import { isUnauthorizedError } from "@/lib/orpc-error";
 import { clearPrivateArtCache } from "@/lib/private-art-cache";
@@ -46,11 +47,33 @@ export default function FavoriteButton({
     retry: (failureCount, error) => !isUnauthorizedError(error) && failureCount < 2,
   });
   const favoriteIdsQuery = useQuery(favoriteIdsOptions);
+  const [localFavoriteState, setLocalFavoriteState] = useState<{
+    artworkId: string;
+    isFavorite: boolean;
+    userId: string | null;
+  } | null>(null);
+  const localIsFavorite =
+    localFavoriteState?.artworkId === artworkId && localFavoriteState.userId === userId
+      ? localFavoriteState.isFavorite
+      : null;
+  const isFavorite =
+    !isSessionPending && userId === null
+      ? false
+      : favoriteIdsQuery.data
+        ? favoriteIdsQuery.data.ids.includes(artworkId)
+        : (localIsFavorite ?? initialIsFavorite);
   const toggleFavorite = useMutation({
     ...orpc.favorites.toggle.mutationOptions(),
     onMutate: async ({ artworkId: targetArtworkId }) => {
       await queryClient.cancelQueries({ queryKey: favoriteIdsOptions.queryKey, exact: true });
       const previous = queryClient.getQueryData<FavoriteIdsData>(favoriteIdsOptions.queryKey);
+      const previousLocal = localFavoriteState;
+
+      setLocalFavoriteState({
+        artworkId: targetArtworkId,
+        isFavorite: !isFavorite,
+        userId,
+      });
 
       queryClient.setQueryData<FavoriteIdsData>(favoriteIdsOptions.queryKey, (current) => {
         if (!current) return current;
@@ -60,10 +83,16 @@ export default function FavoriteButton({
         return { ids };
       });
 
-      return { previous, queryKey: favoriteIdsOptions.queryKey, userId };
+      return { previous, previousLocal, queryKey: favoriteIdsOptions.queryKey, userId };
     },
     onSuccess: (result, _input, mutationState) => {
       if (mutationState.userId === null || mutationState.userId !== currentUserId.current) return;
+
+      setLocalFavoriteState({
+        artworkId: result.artworkId,
+        isFavorite: result.isFavorite,
+        userId: mutationState.userId,
+      });
 
       queryClient.setQueryData<FavoriteIdsData>(mutationState.queryKey, (current) => {
         if (!current) return current;
@@ -75,6 +104,8 @@ export default function FavoriteButton({
     },
     onError: (error, _input, mutationState) => {
       if (!mutationState || mutationState.userId !== currentUserId.current) return;
+
+      setLocalFavoriteState(mutationState.previousLocal);
 
       if (mutationState.previous) {
         queryClient.setQueryData<FavoriteIdsData>(mutationState.queryKey, mutationState.previous);
@@ -107,24 +138,27 @@ export default function FavoriteButton({
     },
   });
 
-  const isFavorite = favoriteIdsQuery.data
-    ? favoriteIdsQuery.data.ids.includes(artworkId)
-    : isSessionPending
-      ? initialIsFavorite
-      : false;
   const isFavoriteTruthPending =
-    isSessionPending || (userId !== null && !favoriteIdsQuery.isSuccess);
+    isSessionPending || (userId !== null && favoriteIdsQuery.isPending);
+  const isUpdating = toggleFavorite.isPending;
 
-  const label = isFavorite ? "Remove from favorites" : "Save to favorites";
+  const label = isUpdating
+    ? "Updating favorites"
+    : isFavorite
+      ? "Remove from favorites"
+      : "Save to favorites";
+  const iconTransition =
+    "absolute inset-0 transition-[opacity,filter,scale] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none";
 
   return (
     <button
       type="button"
       aria-label={label}
       aria-pressed={isFavorite}
-      disabled={isFavoriteTruthPending || toggleFavorite.isPending}
+      aria-busy={isUpdating}
+      disabled={isFavoriteTruthPending || isUpdating}
       className={cn(
-        "relative inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white/95 text-neutral-950 shadow-sm ring-1 ring-black/10 backdrop-blur-sm transition-transform duration-150 outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:opacity-60 sm:pointer-fine:h-10 sm:pointer-fine:min-w-10",
+        "relative inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white/95 text-neutral-950 shadow-sm ring-1 ring-black/10 backdrop-blur-sm transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:pointer-fine:h-10 sm:pointer-fine:min-w-10",
         !showLabel && "w-12 sm:pointer-fine:w-10",
         showLabel && "w-auto px-3 text-base font-medium sm:text-sm",
         className,
@@ -147,11 +181,29 @@ export default function FavoriteButton({
         toggleFavorite.mutate({ artworkId });
       }}
     >
-      <Bookmark
-        className={cn("size-4 shrink-0 stroke-neutral-950", isFavorite && "fill-neutral-950")}
-        aria-hidden="true"
-      />
-      {showLabel && <span>{isFavorite ? "Saved" : "Save"}</span>}
+      <span className="relative size-4 shrink-0" aria-hidden="true">
+        <Bookmark
+          className={cn(
+            "size-4 stroke-neutral-950",
+            iconTransition,
+            isFavorite ? "scale-[0.25] opacity-0 blur-[4px]" : "scale-100 opacity-100 blur-0",
+          )}
+        />
+        <Bookmark
+          className={cn(
+            "size-4 fill-neutral-950 stroke-neutral-950",
+            iconTransition,
+            isFavorite ? "scale-100 opacity-100 blur-0" : "scale-[0.25] opacity-0 blur-[4px]",
+          )}
+        />
+      </span>
+      {showLabel ? (
+        <PendingButtonLabel
+          idle={isFavorite ? "Saved" : "Save"}
+          pending="Updating…"
+          isPending={isUpdating}
+        />
+      ) : null}
     </button>
   );
 }

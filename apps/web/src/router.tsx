@@ -14,6 +14,8 @@ export const getRouter = () => {
     defaultPreload: "intent",
     defaultPreloadDelay: 60,
     defaultPreloadStaleTime: 0,
+    defaultPendingMs: 180,
+    defaultPendingMinMs: 280,
     context: { orpc, queryClient },
     defaultPendingComponent: () => <Loader />,
     defaultNotFoundComponent: () => <div>Not Found</div>,

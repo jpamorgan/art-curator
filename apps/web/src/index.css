@@ -17,8 +17,52 @@ select {
   -webkit-tap-highlight-color: transparent;
 }
 
+@keyframes navigation-progress {
+  0% {
+    opacity: 0;
+    transform: scaleX(0.06);
+  }
+
+  4% {
+    opacity: 1;
+  }
+
+  55% {
+    opacity: 1;
+    transform: scaleX(0.72);
+  }
+
+  100% {
+    opacity: 1;
+    transform: scaleX(0.94);
+  }
+}
+
+.navigation-progress {
+  opacity: 0;
+  transform: scaleX(0);
+  transform-origin: left;
+  transition-property: opacity, transform;
+  transition-duration: 150ms;
+  transition-timing-function: ease-in;
+}
+
+.navigation-progress[data-active="true"] {
+  animation: navigation-progress 8s cubic-bezier(0.2, 0, 0, 1) 120ms both;
+}
+
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+  }
+
+  .navigation-progress {
+    animation: none;
+    transition: none;
+  }
+
+  .navigation-progress[data-active="true"] {
+    opacity: 1;
+    transform: scaleX(1);
   }
 }

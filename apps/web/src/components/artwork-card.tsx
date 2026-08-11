@@ -1,5 +1,6 @@
+import { Skeleton } from "@art/ui/components/skeleton";
 import { Link } from "@tanstack/react-router";
-import { useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 
 import FavoriteButton from "@/components/favorite-button";
 
@@ -36,9 +37,37 @@ function getSafeAspectRatio(artwork: ArtworkCardData) {
 
 export function ArtworkCard({ artwork, isFavorite, priority = false }: ArtworkCardProps) {
   const preferredSource = artwork.thumbnailUrl || artwork.imageUrl;
+  const imageRef = useRef<HTMLImageElement>(null);
+  const [isHydrated, setIsHydrated] = useState(false);
   const [imageSource, setImageSource] = useState<string | null>(preferredSource || null);
+  const [imageState, setImageState] = useState<"loading" | "loaded" | "failed">(
+    preferredSource ? "loading" : "failed",
+  );
   const imageStyle = { "--artwork-aspect": getSafeAspectRatio(artwork) } as CSSProperties;
   const description = [artwork.artist, artwork.date].filter(Boolean).join(", ");
+  const hideImage = isHydrated && imageState === "loading";
+
+  const handleImageFailure = useCallback(() => {
+    if (imageSource !== artwork.imageUrl && artwork.imageUrl) {
+      setImageState("loading");
+      setImageSource(artwork.imageUrl);
+      return;
+    }
+    setImageState("failed");
+    setImageSource(null);
+  }, [artwork.imageUrl, imageSource]);
+
+  useEffect(() => setIsHydrated(true), []);
+
+  useEffect(() => {
+    const image = imageRef.current;
+    if (!image?.complete) return;
+    if (image.naturalWidth > 0) {
+      setImageState("loaded");
+    } else {
+      handleImageFailure();
+    }
+  }, [handleImageFailure, imageSource]);
 
   return (
     <article className="group relative min-w-0">
@@ -53,23 +82,25 @@ export function ArtworkCard({ artwork, isFavorite, priority = false }: ArtworkCa
         style={imageStyle}
       >
         {imageSource ? (
-          <img
-            src={imageSource}
-            alt={artwork.alt}
-            width={artwork.imageWidth}
-            height={artwork.imageHeight}
-            loading={priority ? "eager" : "lazy"}
-            fetchPriority={priority ? "high" : "auto"}
-            decoding="async"
-            className="size-full object-cover transition-[opacity,transform] duration-300 ease-out group-hover:scale-[1.015] motion-reduce:transition-none"
-            onError={() => {
-              if (imageSource !== artwork.imageUrl && artwork.imageUrl) {
-                setImageSource(artwork.imageUrl);
-              } else {
-                setImageSource(null);
-              }
-            }}
-          />
+          <>
+            {imageState === "loading" ? (
+              <Skeleton className="absolute inset-0 rounded-none bg-neutral-100" />
+            ) : null}
+            <img
+              key={imageSource}
+              ref={imageRef}
+              src={imageSource}
+              alt={artwork.alt}
+              width={artwork.imageWidth}
+              height={artwork.imageHeight}
+              loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? "high" : "auto"}
+              decoding="async"
+              className={`relative z-[1] size-full object-cover transition-[opacity,scale] duration-300 ease-[cubic-bezier(0.2,0,0,1)] motion-reduce:transition-none ${hideImage ? "scale-[1.01] opacity-0" : "scale-100 opacity-100 group-hover:scale-[1.015]"}`}
+              onLoad={() => setImageState("loaded")}
+              onError={handleImageFailure}
+            />
+          </>
         ) : (
           <div className="flex size-full items-center justify-center p-4 text-center text-base text-neutral-500 sm:text-sm">
             Image unavailable

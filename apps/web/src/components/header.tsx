@@ -1,5 +1,6 @@
+import { Skeleton } from "@art/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useLocation, useNavigate } from "@tanstack/react-router";
+import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 
 import UserMenu from "@/components/user-menu";
@@ -41,6 +42,7 @@ function readGallerySearch(search: unknown): GallerySearch {
 export default function Header({ initialSession }: { initialSession: PublicUserSession | null }) {
   const navigate = useNavigate();
   const location = useLocation();
+  const isNavigating = useRouterState({ select: (state) => state.status === "pending" });
   const categoriesQuery = useQuery(orpc.artworks.categories.queryOptions());
   const search = readGallerySearch(location.search);
   const selectedFilter = selectedHeaderFilterIdentity(search);
@@ -93,13 +95,13 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
           <Link
             to="/"
             aria-label="Homepage"
-            className="relative flex min-h-12 items-center rounded-full px-1.5 font-semibold tracking-[-0.04em] text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:px-2"
+            className="relative flex min-h-12 min-w-10 items-center justify-center rounded-full px-1.5 font-semibold tracking-[-0.04em] text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:px-2"
           >
             art.
           </Link>
           <Link
             to="/favorites"
-            className="flex min-h-10 items-center rounded-full bg-neutral-100 px-2.5 text-base text-neutral-700 hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:px-3 sm:text-sm"
+            className="flex min-h-10 items-center rounded-full bg-neutral-100 px-2.5 text-base text-neutral-700 transition-transform duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:px-3 sm:text-sm"
           >
             Favorites
           </Link>
@@ -110,23 +112,32 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
 
         <nav
           aria-label="Browse art"
+          aria-busy={categoriesQuery.isPending}
           className="order-last flex min-w-0 basis-full items-center gap-1.5 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:order-none lg:basis-auto lg:flex-1"
         >
           <Link
             to="/galleries"
-            className="flex min-h-10 shrink-0 items-center rounded-full px-3 text-base text-neutral-500 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
+            className="flex min-h-10 shrink-0 items-center rounded-full px-3 text-base text-neutral-500 transition-transform duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
             activeProps={{ className: "bg-neutral-100 text-neutral-950" }}
           >
             Galleries
           </Link>
           <Link
             to="/styles"
-            className="flex min-h-10 shrink-0 items-center rounded-full px-3 text-base text-neutral-500 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
+            className="flex min-h-10 shrink-0 items-center rounded-full px-3 text-base text-neutral-500 transition-transform duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
             activeProps={{ className: "bg-neutral-100 text-neutral-950" }}
           >
             Styles
           </Link>
           <span aria-hidden="true" className="h-5 w-px shrink-0 bg-black/10" />
+          {categoriesQuery.isPending
+            ? ["w-12", "w-16", "w-14", "w-24", "w-28", "w-20"].map((width) => (
+                <Skeleton
+                  key={width}
+                  className={`h-10 shrink-0 rounded-full bg-neutral-100 ${width}`}
+                />
+              ))
+            : null}
           {filters.map((filter) => {
             const filterIdentity = headerFilterIdentity(filter);
             const isSelected = location.pathname === "/" && selectedFilter === filterIdentity;
@@ -142,7 +153,7 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
                 to="/"
                 search={filterSearch}
                 aria-current={isSelected ? "page" : undefined}
-                className={`flex min-h-10 shrink-0 items-center rounded-full px-3 text-base hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm ${isSelected ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-500"}`}
+                className={`flex min-h-10 shrink-0 items-center rounded-full px-3 text-base transition-transform duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm ${isSelected ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-500"}`}
               >
                 {filter.name}
               </Link>
@@ -177,6 +188,12 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
             </label>
           </div>
         ) : null}
+      </div>
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-x-0 bottom-0 h-px overflow-hidden"
+      >
+        <div className="navigation-progress h-full bg-neutral-950" data-active={isNavigating} />
       </div>
     </header>
   );

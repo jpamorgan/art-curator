@@ -3,6 +3,7 @@ import { createFileRoute, useNavigate } from "@tanstack/react-router";
 import { useEffect, useRef } from "react";
 
 import { ArtGallery } from "@/components/art-gallery";
+import { GalleryPageSkeleton } from "@/components/gallery-skeleton";
 import { RouteUnavailable } from "@/components/route-unavailable";
 import { authClient } from "@/lib/auth-client";
 import { isUnauthorizedError } from "@/lib/orpc-error";
@@ -32,6 +33,7 @@ export const Route = createFileRoute("/_auth/favorites")({
   head: () => ({
     meta: [{ title: "Favorites — Art" }, { name: "description", content: "Your saved art." }],
   }),
+  pendingComponent: GalleryPageSkeleton,
   errorComponent: () => (
     <RouteUnavailable title="Favorites unavailable" message="Your saved art could not be loaded." />
   ),
@@ -100,6 +102,7 @@ function FavoritesPage() {
         favoriteIds={favoriteIds}
         isLoading={favorites.isPending || isUnauthorized || isWaitingForSession || userId === null}
         isError={favorites.isError && !isUnauthorized}
+        isRetrying={favorites.isFetching}
         errorMessage="Could not load favorites."
         onRetry={() => favorites.refetch()}
         hasNextPage={favorites.hasNextPage}

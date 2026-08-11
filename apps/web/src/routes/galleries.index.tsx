@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { BrowseIndex } from "@/components/browse-index";
+import { BrowseIndex, BrowseIndexSkeleton } from "@/components/browse-index";
 import { RouteUnavailable } from "@/components/route-unavailable";
 import { orpc } from "@/utils/orpc";
 
@@ -15,6 +15,7 @@ export const Route = createFileRoute("/galleries/")({
     ],
     links: [{ rel: "canonical", href: "https://art.jpamorgan.com/galleries" }],
   }),
+  pendingComponent: () => <BrowseIndexSkeleton kind="galleries" />,
   errorComponent: () => (
     <RouteUnavailable title="Galleries unavailable" message="Galleries could not be loaded." />
   ),
@@ -30,6 +31,7 @@ function GalleriesIndex() {
       items={galleriesQuery.data?.items ?? []}
       isLoading={galleriesQuery.isPending}
       isError={galleriesQuery.isError}
+      isRetrying={galleriesQuery.isFetching}
       onRetry={() => void galleriesQuery.refetch()}
     />
   );

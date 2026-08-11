@@ -1,10 +1,9 @@
-import type { ArtworkCard } from "@art/api/art-contract";
 import { Skeleton } from "@art/ui/components/skeleton";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { ArrowLeft, ArrowUpRight } from "lucide-react";
-import { useState } from "react";
 
 import { ArtGallery } from "@/components/art-gallery";
+import { ArtworkImage } from "@/components/artwork-image";
 import FavoriteButton from "@/components/favorite-button";
 import { loadArtworkRouteData } from "@/lib/artwork-route-data";
 
@@ -64,63 +63,6 @@ function normalizeNamedLinks(value: unknown): NamedLink[] {
   return value.map(normalizeNamedLink).filter((item): item is NamedLink => item !== null);
 }
 
-type ArtworkImageData = Pick<
-  ArtworkCard,
-  "alt" | "imageHeight" | "imageUrl" | "imageWidth" | "thumbnailUrl"
->;
-
-function ArtworkImage({ artwork }: { artwork: ArtworkImageData }) {
-  const [phase, setPhase] = useState<"full" | "thumbnail" | "unavailable">("full");
-  const [isLoaded, setIsLoaded] = useState(false);
-  const source =
-    phase === "full" ? artwork.imageUrl : phase === "thumbnail" ? artwork.thumbnailUrl : null;
-  const viewportConstrainedWidth = `min(100%, calc((100dvh - 7rem) * ${artwork.imageWidth / artwork.imageHeight}))`;
-
-  return (
-    <div
-      className="relative w-full max-h-[calc(100dvh-7rem)] max-w-full overflow-hidden rounded-[min(1vw,10px)] bg-neutral-100 shadow-sm outline-1 -outline-offset-1 outline-black/10"
-      style={{
-        aspectRatio: `${artwork.imageWidth} / ${artwork.imageHeight}`,
-        maxWidth: viewportConstrainedWidth,
-      }}
-    >
-      {source ? (
-        <>
-          {!isLoaded && (
-            <Skeleton className="absolute inset-0 size-full rounded-none bg-neutral-200" />
-          )}
-          <img
-            key={source}
-            src={source}
-            alt={artwork.alt}
-            width={artwork.imageWidth}
-            height={artwork.imageHeight}
-            className={`absolute inset-0 size-full object-contain transition-opacity duration-150 motion-reduce:transition-none ${isLoaded ? "opacity-100" : "opacity-0"}`}
-            decoding="async"
-            fetchPriority="high"
-            onLoad={() => setIsLoaded(true)}
-            onError={() => {
-              setIsLoaded(false);
-              if (phase === "full" && artwork.thumbnailUrl !== artwork.imageUrl) {
-                setPhase("thumbnail");
-                return;
-              }
-              setPhase("unavailable");
-            }}
-          />
-        </>
-      ) : (
-        <div
-          className="absolute inset-0 flex items-center justify-center p-6 text-center text-base text-neutral-500 sm:text-sm"
-          role="status"
-        >
-          Image unavailable
-        </div>
-      )}
-    </div>
-  );
-}
-
 function ArtworkDetailPage() {
   const { artwork, related } = Route.useLoaderData();
   const gallery = normalizeNamedLink({ name: artwork.gallery, slug: artwork.gallerySlug });
@@ -130,11 +72,11 @@ function ArtworkDetailPage() {
   return (
     <div className="isolate bg-white text-neutral-950">
       <div className="grid min-w-0 lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]">
-        <div className="flex min-h-[50dvh] min-w-0 items-center justify-center bg-neutral-50 p-3 sm:p-6 lg:min-h-[calc(100dvh-4rem)] lg:p-10">
+        <div className="flex min-h-[50dvh] min-w-0 items-center justify-center bg-neutral-50 p-3 sm:p-6 lg:min-h-[calc(100dvh-3.5rem)] lg:p-10">
           <ArtworkImage key={artwork.id} artwork={artwork} />
         </div>
 
-        <aside className="min-w-0 p-5 sm:p-8 lg:sticky lg:top-16 lg:max-h-[calc(100dvh-4rem)] lg:self-start lg:overflow-y-auto">
+        <aside className="min-w-0 p-5 sm:p-8 lg:sticky lg:top-14 lg:max-h-[calc(100dvh-3.5rem)] lg:self-start lg:overflow-y-auto">
           <div className="flex flex-col gap-8">
             <div className="flex items-center justify-between gap-4">
               <Link
@@ -316,19 +258,22 @@ function MetadataRow({ term, detail }: { term: string; detail: string }) {
 
 function ArtworkDetailSkeleton() {
   return (
-    <div className="isolate grid min-h-[calc(100dvh-4rem)] bg-white lg:grid-cols-[minmax(0,1fr)_22rem]">
-      <div className="flex items-center justify-center bg-neutral-50 p-3 sm:p-6 lg:p-10">
-        <Skeleton className="aspect-[4/5] max-h-[calc(100dvh-7rem)] w-full max-w-3xl rounded-[min(1vw,10px)] bg-neutral-200" />
+    <div
+      className="isolate grid min-h-[calc(100dvh-7rem)] bg-white lg:min-h-[calc(100dvh-3.5rem)] lg:grid-cols-[minmax(0,1fr)_22rem] xl:grid-cols-[minmax(0,1fr)_25rem]"
+      role="status"
+      aria-busy="true"
+      aria-live="polite"
+    >
+      <span className="sr-only">Loading artwork details</span>
+      <div className="min-h-[50dvh] overflow-hidden bg-neutral-50 lg:min-h-[calc(100dvh-3.5rem)]">
+        <Skeleton className="size-full min-h-[50dvh] rounded-none bg-neutral-100 lg:min-h-[calc(100dvh-3.5rem)]" />
       </div>
-      <div
-        className="flex flex-col gap-7 p-5 sm:p-8"
-        role="status"
-        aria-label="Loading artwork details"
-      >
+      <div className="flex flex-col gap-8 p-5 sm:p-8">
         <div className="flex justify-between">
           <Skeleton className="size-12 rounded-full bg-neutral-100 sm:pointer-fine:size-10" />
-          <Skeleton className="h-12 w-24 rounded-full bg-neutral-100 sm:pointer-fine:h-10" />
+          <Skeleton className="h-12 w-28 rounded-full bg-neutral-100 sm:pointer-fine:h-10" />
         </div>
+        <Skeleton className="h-8 w-24 rounded-full bg-neutral-100" />
         <div className="flex flex-col gap-3">
           <Skeleton className="h-8 w-4/5 rounded-md bg-neutral-100" />
           <Skeleton className="h-5 w-2/5 rounded-md bg-neutral-100" />
@@ -337,6 +282,29 @@ function ArtworkDetailSkeleton() {
           <Skeleton className="h-4 w-full rounded-md bg-neutral-100" />
           <Skeleton className="h-4 w-11/12 rounded-md bg-neutral-100" />
           <Skeleton className="h-4 w-3/4 rounded-md bg-neutral-100" />
+        </div>
+        <div className="flex flex-col divide-y divide-black/5 border-y border-black/5">
+          {Array.from({ length: 3 }, (_, index) => (
+            <div key={index} className="flex items-center justify-between gap-4 py-3">
+              <Skeleton className="h-4 w-16 rounded-full bg-neutral-100" />
+              <Skeleton className="h-4 w-28 rounded-full bg-neutral-100" />
+            </div>
+          ))}
+        </div>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-4 w-12 rounded-full bg-neutral-100" />
+          <div className="flex gap-2">
+            <Skeleton className="h-8 w-24 rounded-full bg-neutral-100" />
+            <Skeleton className="h-8 w-20 rounded-full bg-neutral-100" />
+          </div>
+        </div>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-10 w-36 rounded-full bg-neutral-100" />
+          <Skeleton className="h-4 w-4/5 rounded-full bg-neutral-100" />
+        </div>
+        <div className="flex flex-col gap-3">
+          <Skeleton className="h-10 w-32 rounded-full bg-neutral-100" />
+          <Skeleton className="h-4 w-3/4 rounded-full bg-neutral-100" />
         </div>
       </div>
     </div>

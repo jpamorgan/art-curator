@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
-import { BrowseIndex } from "@/components/browse-index";
+import { BrowseIndex, BrowseIndexSkeleton } from "@/components/browse-index";
 import { RouteUnavailable } from "@/components/route-unavailable";
 import { orpc } from "@/utils/orpc";
 
@@ -12,6 +12,7 @@ export const Route = createFileRoute("/styles/")({
     meta: [{ title: "Styles — Art" }, { name: "description", content: "Browse art by style." }],
     links: [{ rel: "canonical", href: "https://art.jpamorgan.com/styles" }],
   }),
+  pendingComponent: () => <BrowseIndexSkeleton kind="styles" />,
   errorComponent: () => (
     <RouteUnavailable title="Styles unavailable" message="Styles could not be loaded." />
   ),
@@ -27,6 +28,7 @@ function StylesIndex() {
       items={stylesQuery.data?.items ?? []}
       isLoading={stylesQuery.isPending}
       isError={stylesQuery.isError}
+      isRetrying={stylesQuery.isFetching}
       onRetry={() => void stylesQuery.refetch()}
     />
   );

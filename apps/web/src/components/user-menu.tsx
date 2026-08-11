@@ -13,6 +13,7 @@ import { Link, useNavigate } from "@tanstack/react-router";
 import { useState } from "react";
 import { toast } from "sonner";
 
+import { PendingButtonLabel } from "@/components/pending-button-label";
 import { authClient } from "@/lib/auth-client";
 import { signOutAndNavigate } from "@/lib/auth-actions";
 import { clearPrivateArtCache } from "@/lib/private-art-cache";
@@ -34,7 +35,7 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
       <Link
         to="/login"
         search={{ redirect: "/favorites" }}
-        className="inline-flex min-h-10 items-center rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+        className="inline-flex min-h-10 items-center rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
       >
         Log in
       </Link>
@@ -62,11 +63,13 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
         render={
           <button
             type="button"
-            className="min-h-10 max-w-40 truncate rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+            aria-busy={isSigningOut}
+            className="min-h-10 max-w-48 truncate rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:text-sm"
+            disabled={isSigningOut}
           />
         }
       >
-        {accountLabel}
+        <PendingButtonLabel idle={accountLabel} pending="Logging out…" isPending={isSigningOut} />
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
@@ -81,18 +84,19 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
           <DropdownMenuSeparator className="bg-black/10" />
           <DropdownMenuItem
             render={<Link to="/favorites" />}
-            className="min-h-10 rounded-lg px-2 text-base focus:bg-neutral-100 sm:min-h-8 sm:text-sm"
+            className="min-h-10 rounded-lg px-2 text-base focus:bg-neutral-100 sm:text-sm"
           >
             Favorites
           </DropdownMenuItem>
           <DropdownMenuItem
+            aria-busy={isSigningOut}
             disabled={isSigningOut}
-            className="min-h-10 rounded-lg px-2 text-base focus:bg-neutral-100 sm:min-h-8 sm:text-sm"
+            className="min-h-10 rounded-lg px-2 text-base focus:bg-neutral-100 sm:text-sm"
             onClick={() => {
               void handleSignOut();
             }}
           >
-            {isSigningOut ? "Logging out…" : "Log out"}
+            <PendingButtonLabel idle="Log out" pending="Logging out…" isPending={isSigningOut} />
           </DropdownMenuItem>
         </DropdownMenuGroup>
       </DropdownMenuContent>

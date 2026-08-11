@@ -2,6 +2,7 @@ import { useInfiniteQuery } from "@tanstack/react-query";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { ArtGallery } from "@/components/art-gallery";
+import { GalleryPageSkeleton } from "@/components/gallery-skeleton";
 import { RouteUnavailable } from "@/components/route-unavailable";
 import { orpc } from "@/utils/orpc";
 
@@ -52,6 +53,7 @@ export const Route = createFileRoute("/")({
       },
     ],
   }),
+  pendingComponent: GalleryPageSkeleton,
   errorComponent: () => (
     <RouteUnavailable title="Art unavailable" message="The gallery could not be loaded." />
   ),
@@ -80,6 +82,7 @@ function HomeComponent() {
       items={items}
       isLoading={artworksQuery.isPending}
       isError={artworksQuery.isError}
+      isRetrying={artworksQuery.isFetching}
       errorMessage={artworksQuery.error?.message}
       onRetry={() => void artworksQuery.refetch()}
       hasNextPage={artworksQuery.hasNextPage}

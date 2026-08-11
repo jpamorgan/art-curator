@@ -6,7 +6,7 @@ import {
   FilteredGalleryRouteState,
   getFilteredArtworkListInput,
 } from "@/components/filtered-gallery-page";
-import { loadValidatedBrowseData } from "@/lib/browse-route-data";
+import { loadBrowseRouteData } from "@/lib/browse-route-data";
 
 const SORT_OPTIONS = ["recent", "title", "artist"] as const;
 type SortOrder = (typeof SORT_OPTIONS)[number];
@@ -26,19 +26,21 @@ export const Route = createFileRoute("/galleries/$slug")({
   validateSearch: parseSortSearch,
   loaderDeps: ({ search }) => ({ sort: search.sort ?? "recent" }),
   loader: async ({ context, deps, params }) => {
-    const data = await loadValidatedBrowseData(() =>
-      context.queryClient.ensureQueryData(
-        context.orpc.galleries.bySlug.queryOptions({ input: { slug: params.slug } }),
-      ),
+    const data = await loadBrowseRouteData(
+      () =>
+        context.queryClient.ensureQueryData(
+          context.orpc.galleries.bySlug.queryOptions({ input: { slug: params.slug } }),
+        ),
+      () =>
+        context.queryClient.ensureInfiniteQueryData(
+          context.orpc.artworks.list.infiniteOptions({
+            input: getFilteredArtworkListInput("gallery", params.slug, deps.sort),
+            initialPageParam: undefined,
+            getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
+          }),
+        ),
     );
     if (!data) throw notFound();
-    await context.queryClient.ensureInfiniteQueryData(
-      context.orpc.artworks.list.infiniteOptions({
-        input: getFilteredArtworkListInput("gallery", params.slug, deps.sort),
-        initialPageParam: undefined,
-        getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
-      }),
-    );
     return data;
   },
   head: ({ loaderData }) => {
@@ -60,7 +62,7 @@ export const Route = createFileRoute("/galleries/$slug")({
       links: [{ rel: "canonical", href: `https://art.jpamorgan.com/galleries/${gallery.slug}` }],
     };
   },
-  pendingComponent: FilteredGalleryPageSkeleton,
+  pendingComponent: () => <FilteredGalleryPageSkeleton filter="gallery" />,
   errorComponent: () => <FilteredGalleryRouteState kind="gallery" status="error" />,
   notFoundComponent: () => <FilteredGalleryRouteState kind="gallery" status="not-found" />,
   component: GalleryRoute,
