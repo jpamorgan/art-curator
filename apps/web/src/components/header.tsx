@@ -1,7 +1,7 @@
 import { Skeleton } from "@art/ui/components/skeleton";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
-import { ChevronDown } from "lucide-react";
+import { Bookmark, ChevronDown } from "lucide-react";
 
 import SubmissionDialog from "@/components/submission-dialog";
 import UserMenu from "@/components/user-menu";
@@ -91,8 +91,8 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 shadow-[0_1px_0_rgba(0,0,0,0.08)] backdrop-blur-md">
-      <div className="flex min-h-14 flex-wrap items-center gap-x-1 px-1 sm:gap-x-3 sm:px-3 lg:flex-nowrap">
-        <div className="flex shrink-0 items-center gap-0.5 sm:gap-1">
+      <div className="grid min-h-14 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-1 px-2 sm:gap-x-3 sm:px-3 lg:flex lg:flex-nowrap">
+        <div className="col-start-1 row-start-1 flex min-w-0 items-center gap-0.5 sm:gap-1">
           <Link
             to="/"
             aria-label="Homepage"
@@ -102,12 +102,14 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
           </Link>
           <Link
             to="/favorites"
-            className="flex min-h-10 items-center rounded-full bg-neutral-100 px-2.5 text-base text-neutral-700 transition-transform duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:px-3 sm:text-sm"
+            aria-label="Favorites"
+            className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-transform duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:size-auto sm:min-h-10 sm:px-3"
           >
-            Favorites
+            <Bookmark aria-hidden="true" className="size-5 shrink-0 stroke-current sm:hidden" />
+            <span className="hidden text-sm sm:block">Favorites</span>
           </Link>
           <SubmissionDialog />
-          <div className="max-sm:[&_a]:px-2.5 max-sm:[&_button]:px-2.5">
+          <div className="shrink-0">
             <UserMenu initialSession={initialSession} />
           </div>
         </div>
@@ -115,7 +117,7 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
         <nav
           aria-label="Browse art"
           aria-busy={categoriesQuery.isPending}
-          className="order-last flex min-w-0 basis-full items-center gap-1.5 overflow-x-auto py-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden lg:order-none lg:basis-auto lg:flex-1"
+          className="col-span-2 row-start-2 flex min-w-0 items-center gap-1.5 overflow-x-auto py-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden sm:py-2 lg:order-none lg:flex-1"
         >
           <Link
             to="/galleries"
@@ -164,7 +166,7 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
         </nav>
 
         {hasSort ? (
-          <div className="ml-auto shrink-0 py-2 lg:ml-0">
+          <div className="col-start-2 row-start-1 shrink-0 lg:ml-0">
             <label
               className="inline-grid grid-cols-[1fr_--spacing(7)] sm:grid-cols-[1fr_--spacing(8)]"
               title="Sort artwork"

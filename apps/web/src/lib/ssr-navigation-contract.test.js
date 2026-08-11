@@ -160,4 +160,16 @@ describe("SSR and hydrated navigation contract", () => {
     expect(userMenuSource).toMatch(/render=\{<Link to="\/favorites" \/>\}/u);
     expect(userMenuSource).not.toContain('navigate({ to: "/favorites" })');
   });
+
+  test("keeps mobile header controls to two explicit rows", async () => {
+    const headerSource = await readSource("components/header.tsx");
+    const userMenuSource = await readSource("components/user-menu.tsx");
+
+    expect(headerSource).toContain("grid-cols-[minmax(0,1fr)_auto]");
+    expect(headerSource).toContain("col-span-2 row-start-2");
+    expect(headerSource).toContain("col-start-2 row-start-1");
+    expect(headerSource).toContain('aria-label="Favorites"');
+    expect(userMenuSource).toContain('aria-label="Log in"');
+    expect(userMenuSource).toContain("size-12");
+  });
 });

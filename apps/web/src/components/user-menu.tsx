@@ -10,6 +10,7 @@ import {
 import { Skeleton } from "@art/ui/components/skeleton";
 import { useQueryClient } from "@tanstack/react-query";
 import { Link, useNavigate } from "@tanstack/react-router";
+import { UserRound } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
@@ -27,7 +28,12 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
   const [isSigningOut, setIsSigningOut] = useState(false);
 
   if (isPending && initialSession === undefined) {
-    return <Skeleton className="h-10 w-20 rounded-full bg-neutral-100" aria-hidden="true" />;
+    return (
+      <Skeleton
+        className="size-12 rounded-full bg-neutral-100 sm:h-10 sm:w-20"
+        aria-hidden="true"
+      />
+    );
   }
 
   if (!session) {
@@ -35,9 +41,11 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
       <Link
         to="/login"
         search={{ redirect: "/favorites" }}
-        className="inline-flex min-h-10 items-center rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+        aria-label="Log in"
+        className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:size-auto sm:min-h-10 sm:px-3"
       >
-        Log in
+        <UserRound aria-hidden="true" className="size-5 shrink-0 stroke-current sm:hidden" />
+        <span className="hidden text-sm sm:block">Log in</span>
       </Link>
     );
   }
@@ -63,13 +71,17 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
         render={
           <button
             type="button"
+            aria-label={`Account menu for ${accountLabel}`}
             aria-busy={isSigningOut}
-            className="min-h-10 max-w-48 truncate rounded-full bg-neutral-100 px-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:text-sm"
+            className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:size-auto sm:min-h-10 sm:max-w-48 sm:px-3"
             disabled={isSigningOut}
           />
         }
       >
-        <PendingButtonLabel idle={accountLabel} pending="Logging out…" isPending={isSigningOut} />
+        <UserRound aria-hidden="true" className="size-5 shrink-0 stroke-current sm:hidden" />
+        <span className="hidden truncate text-sm sm:block">
+          <PendingButtonLabel idle={accountLabel} pending="Logging out…" isPending={isSigningOut} />
+        </span>
       </DropdownMenuTrigger>
       <DropdownMenuContent
         align="end"
