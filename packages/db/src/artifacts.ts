@@ -70,22 +70,29 @@ export function canonicalArtifactSourceUrl(value: string): string {
   }
 
   const url = new URL(value);
-  const hostname = url.hostname.toLowerCase();
+  const hostname = url.hostname.toLowerCase().replace(/\.+$/, "");
   if (
     url.protocol !== "https:" ||
     url.username !== "" ||
     url.password !== "" ||
     url.port !== "" ||
+    hostname === "" ||
+    !hostname.includes(".") ||
     hostname === "localhost" ||
     hostname.endsWith(".localhost") ||
     hostname.endsWith(".local") ||
     hostname.endsWith(".internal") ||
+    hostname === "home.arpa" ||
+    hostname.endsWith(".home.arpa") ||
+    hostname === "localdomain" ||
+    hostname.endsWith(".localdomain") ||
     hostname.includes(":") ||
     isPrivateIpv4(hostname)
   ) {
     throw new Error("Artifact source URL must use a public HTTPS host.");
   }
 
+  url.hostname = hostname;
   url.hash = "";
   return url.toString();
 }

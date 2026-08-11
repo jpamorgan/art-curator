@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Link, useLocation, useNavigate, useRouterState } from "@tanstack/react-router";
 import { ChevronDown } from "lucide-react";
 
+import SubmissionDialog from "@/components/submission-dialog";
 import UserMenu from "@/components/user-menu";
 import {
   buildHeaderFilters,
@@ -105,6 +106,7 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
           >
             Favorites
           </Link>
+          <SubmissionDialog />
           <div className="max-sm:[&_a]:px-2.5 max-sm:[&_button]:px-2.5">
             <UserMenu initialSession={initialSession} />
           </div>

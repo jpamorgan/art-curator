@@ -6,6 +6,7 @@ import {
   ARTIFACT_MAX_THUMBNAIL_BYTES,
   artworkArtifactExpectation,
   artworkArtifactUrl,
+  canonicalArtifactSourceUrl,
 } from "./artifacts";
 
 const expectation = await artworkArtifactExpectation({
@@ -96,19 +97,74 @@ describe("bounded artwork downloads", () => {
   });
 
   test("validates every redirect target against the public HTTPS policy", async () => {
-    await expect(
-      downloadArtworkArtifact(expectation, {
-        fetcher: async () =>
-          new Response(null, {
-            status: 302,
-            headers: { Location: "http://127.0.0.1/private.jpg" },
-          }),
-      }),
-    ).rejects.toThrow("redirected to an unsafe URL");
+    for (const location of [
+      "http://127.0.0.1/private.jpg",
+      "https://LOCALHOST./private.jpg",
+      "https://foo.Local../private.jpg",
+      "https://foo.INTERNAL./private.jpg",
+      "https://intranet./private.jpg",
+      "https://router.home.arpa./private.jpg",
+      "https://localhost.localdomain./private.jpg",
+      "https://router%E3%80%82home%E3%80%82arpa%E3%80%82/private.jpg",
+    ]) {
+      await expect(
+        downloadArtworkArtifact(expectation, {
+          fetcher: async () => new Response(null, { status: 302, headers: { Location: location } }),
+        }),
+      ).rejects.toThrow("redirected to an unsafe URL");
+    }
+  });
+
+  test("canonicalizes a safe trailing-dot redirect before following it", async () => {
+    const urls = [];
+    const bytes = new Uint8Array(1_024);
+    bytes.set([0xff, 0xd8, 0xff]);
+    await downloadArtworkArtifact(expectation, {
+      fetcher: async (url) => {
+        urls.push(url.toString());
+        return urls.length === 1
+          ? new Response(null, {
+              status: 302,
+              headers: { Location: "https://CDN.Example.COM.../safe.jpg" },
+            })
+          : new Response(bytes, { headers: { "Content-Type": ARTIFACT_CONTENT_TYPE } });
+      },
+    });
+    expect(urls).toEqual([expectation.canonicalUpstreamUrl, "https://cdn.example.com/safe.jpg"]);
   });
 });
 
 describe("artifact source fingerprints", () => {
+  test("normalizes public FQDN dots and rejects local-only hostnames", () => {
+    expect(canonicalArtifactSourceUrl("https://cdn.example.com/work")).toBe(
+      "https://cdn.example.com/work",
+    );
+    expect(canonicalArtifactSourceUrl("https://Images.Example.COM.../work#detail")).toBe(
+      "https://images.example.com/work",
+    );
+    for (const url of [
+      "https://localhost./work",
+      "https://sub.LOCALHOST../work",
+      "https://foo.LoCaL./work",
+      "https://foo.InTeRnAl.../work",
+      "https://intranet./work",
+      "https://com/work",
+      "https://home.arpa/work",
+      "https://router.home.arpa./work",
+      "https://LOCALHOST.LocalDomain../work",
+      "https://foo.localdomain/work",
+      "https://router。home。arpa。/work",
+      "https://router．home．arpa．/work",
+      "https://router｡home｡arpa｡/work",
+      "https://localhost%2e/work",
+      "https://127.0.0.1./work",
+      "https://10.0.0.1./work",
+      "https://[::1]/work",
+    ]) {
+      expect(() => canonicalArtifactSourceUrl(url)).toThrow("public HTTPS host");
+    }
+  });
+
   test("change with source identity and participate in the immutable public URL", async () => {
     const changed = await artworkArtifactExpectation({
       artworkId: expectation.artworkId,

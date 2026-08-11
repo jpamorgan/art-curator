@@ -14,9 +14,16 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
 import { resolveArtworkArtifactExpectation, serveArtworkArtifact } from "./artifacts";
+import { handleCatalogArtworkExportRequest, handleCatalogArtworkSearchRequest } from "./catalog";
 import { handleArtworkImportRequest } from "./import-artworks";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
-import { favoriteMutationGuard } from "./security";
+import { favoriteMutationGuard, mutationOriginGuard } from "./security";
+import {
+  handleCreateSubmissionRequest,
+  handleGetSubmissionRequest,
+  handleListSubmissionsRequest,
+  handleResolveSubmissionRequest,
+} from "./submissions";
 
 const app = new Hono();
 
@@ -25,7 +32,7 @@ app.use(
   "/*",
   cors({
     origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "OPTIONS"],
+    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
@@ -57,6 +64,45 @@ app.post("/internal/art-import", (c) =>
 app.post("/internal/artifact-sync", (c) =>
   handleSeedArtifactSyncRequest(c.req.raw, {
     bucket: env.ARTWORKS,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+
+const guardSubmissionMutation = mutationOriginGuard(authSecurityOptions(env).trustedOrigins);
+app.use("/submissions", guardSubmissionMutation);
+app.post("/submissions", (c) =>
+  handleCreateSubmissionRequest(c.req.raw, {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+app.get("/internal/submissions", (c) =>
+  handleListSubmissionsRequest(c.req.raw, {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+app.get("/internal/submissions/:id", (c) =>
+  handleGetSubmissionRequest(c.req.raw, c.req.param("id"), {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+app.patch("/internal/submissions/:id", (c) =>
+  handleResolveSubmissionRequest(c.req.raw, c.req.param("id"), {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+app.get("/internal/catalog/artworks", (c) =>
+  handleCatalogArtworkSearchRequest(c.req.raw, {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+  }),
+);
+app.get("/internal/catalog/artworks/:id", (c) =>
+  handleCatalogArtworkExportRequest(c.req.raw, c.req.param("id"), {
+    database: env.DB,
     secret: env.ART_IMPORT_SECRET,
   }),
 );

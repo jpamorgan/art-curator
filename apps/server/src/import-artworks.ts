@@ -76,6 +76,13 @@ function isDatabaseConstraintFailure(error: unknown): boolean {
   });
 }
 
+function isCatalogGuardFailure(error: unknown): boolean {
+  return errorChain(error).some((candidate) => {
+    const message = candidate instanceof Error ? candidate.message : String(candidate);
+    return /catalog_import_guard(?:_valid_check)?/i.test(message);
+  });
+}
+
 async function headArtifact(
   bucket: ImportBucket,
   expectation: ArtworkArtifactExpectation,
@@ -260,6 +267,15 @@ export const artworkImportBatchSchema = z
 
 export type ArtworkImportBatch = z.infer<typeof artworkImportBatchSchema>;
 
+export const artworkImportRequestSchema = z
+  .object({
+    expectedCatalogVersion: z.number().int().positive(),
+    batch: artworkImportBatchSchema,
+  })
+  .strict();
+
+export type ArtworkImportRequest = z.infer<typeof artworkImportRequestSchema>;
+
 async function authorize(request: Request, secret: string): Promise<void> {
   const result = await authorizeInternalJob(request, secret);
   if (result === "not_configured") throw new ImportRequestError(503, "import_not_configured");
@@ -325,8 +341,18 @@ function databaseStatements(
     { full: ArtworkArtifactExpectation; thumbnail: ArtworkArtifactExpectation }
   >,
   now: number,
+  expectedCatalogVersion: number,
 ): D1PreparedStatement[] {
-  const statements: D1PreparedStatement[] = [];
+  const statements: D1PreparedStatement[] = [
+    prepared(
+      database,
+      `INSERT INTO catalog_import_guard (id, valid)
+       VALUES (1, CASE
+         WHEN (SELECT version FROM catalog_state WHERE id = 1) = ? THEN 1 ELSE 0
+       END)`,
+      [expectedCatalogVersion],
+    ),
+  ];
   const sourceIds = new Map(batch.sources.map((row) => [row.slug, row.id]));
   const galleryIds = new Map(batch.galleries.map((row) => [row.slug, row.id]));
   const categoryIds = new Map(batch.categories.map((row) => [row.slug, row.id]));
@@ -479,14 +505,35 @@ function databaseStatements(
       `INSERT INTO artwork_style (artwork_id, style_id) VALUES ${placeholders(styleLinks.length, 2)}`,
       styleLinks.flat(),
     ),
+    prepared(database, "UPDATE catalog_state SET version = version + 1 WHERE id = 1", []),
+    prepared(database, "DELETE FROM catalog_import_guard WHERE id = 1", []),
   );
   return statements;
 }
 
+async function catalogVersion(database: ImportDatabase): Promise<number> {
+  try {
+    const row = await database
+      .prepare("SELECT version FROM catalog_state WHERE id = 1")
+      .first<{ version: number }>();
+    if (!row || !Number.isSafeInteger(row.version) || row.version < 1) {
+      throw new ImportRequestError(503, "database_unavailable");
+    }
+    return row.version;
+  } catch (error) {
+    if (error instanceof ImportRequestError) throw error;
+    throw new ImportRequestError(503, "database_unavailable");
+  }
+}
+
 async function importBatch(
   batch: ArtworkImportBatch,
+  expectedCatalogVersion: number,
   dependencies: ArtworkImportDependencies,
-): Promise<{ artworkIds: string[]; reused: number; uploaded: number }> {
+): Promise<{ artworkIds: string[]; catalogVersion: number; reused: number; uploaded: number }> {
+  if ((await catalogVersion(dependencies.database)) !== expectedCatalogVersion) {
+    throw new ImportRequestError(409, "catalog_conflict");
+  }
   const now = dependencies.now ?? Date.now;
   const sleep =
     dependencies.sleep ??
@@ -556,14 +603,22 @@ async function importBatch(
   assertDeadline();
   try {
     await dependencies.database.batch(
-      databaseStatements(dependencies.database, batch, expectations, now()),
+      databaseStatements(dependencies.database, batch, expectations, now(), expectedCatalogVersion),
     );
   } catch (error) {
+    if (isCatalogGuardFailure(error)) {
+      throw new ImportRequestError(409, "catalog_conflict");
+    }
     throw isDatabaseConstraintFailure(error)
       ? new ImportRequestError(409, "database_conflict")
       : new ImportRequestError(503, "database_unavailable");
   }
-  return { artworkIds: batch.artworks.map((row) => row.id), uploaded, reused };
+  return {
+    artworkIds: batch.artworks.map((row) => row.id),
+    catalogVersion: expectedCatalogVersion + 1,
+    uploaded,
+    reused,
+  };
 }
 
 export async function handleArtworkImportRequest(
@@ -575,9 +630,13 @@ export async function handleArtworkImportRequest(
       return new Response(null, { status: 404 });
     }
     await authorize(request, dependencies.secret);
-    const parsed = artworkImportBatchSchema.safeParse(await readJson(request));
+    const parsed = artworkImportRequestSchema.safeParse(await readJson(request));
     if (!parsed.success) throw new ImportRequestError(422, "invalid_batch");
-    const result = await importBatch(parsed.data, dependencies);
+    const result = await importBatch(
+      parsed.data.batch,
+      parsed.data.expectedCatalogVersion,
+      dependencies,
+    );
     return Response.json(result, { status: 200 });
   } catch (error) {
     if (error instanceof ImportRequestError) {

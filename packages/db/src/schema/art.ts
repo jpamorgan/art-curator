@@ -189,6 +189,90 @@ export const favorite = sqliteTable(
   ],
 );
 
+export const artSubmission = sqliteTable(
+  "art_submission",
+  {
+    id: text("id").primaryKey(),
+    kind: text("kind", { enum: ["artwork", "artist", "collection"] }).notNull(),
+    url: text("url").notNull(),
+    canonicalUrl: text("canonical_url").notNull(),
+    status: text("status", {
+      enum: ["pending", "reviewing", "accepted", "rejected"],
+    })
+      .default("pending")
+      .notNull(),
+    reviewNote: text("review_note"),
+    resolvedArtworkId: text("resolved_artwork_id").references(() => artwork.id),
+    createdAt: timestamp("created_at"),
+    updatedAt: timestamp("updated_at").$onUpdate(() => /* @__PURE__ */ new Date()),
+    reviewedAt: integer("reviewed_at", { mode: "timestamp_ms" }),
+  },
+  (table) => [
+    uniqueIndex("art_submission_canonical_url_unique").on(table.canonicalUrl),
+    index("art_submission_status_created_idx").on(table.status, table.createdAt, table.id),
+    check("art_submission_kind_check", sql`${table.kind} in ('artwork', 'artist', 'collection')`),
+    check(
+      "art_submission_status_check",
+      sql`${table.status} in ('pending', 'reviewing', 'accepted', 'rejected')`,
+    ),
+    check(
+      "art_submission_url_length_check",
+      sql`length(${table.url}) between 1 and 2048 and length(${table.canonicalUrl}) between 1 and 2048`,
+    ),
+    check(
+      "art_submission_review_note_length_check",
+      sql`${table.reviewNote} is null or length(${table.reviewNote}) between 1 and 500`,
+    ),
+    check(
+      "art_submission_resolution_state_check",
+      sql`(
+        ${table.status} = 'accepted' and ${table.resolvedArtworkId} is not null and ${table.reviewedAt} is not null
+      ) or (
+        ${table.status} = 'rejected' and ${table.resolvedArtworkId} is null and ${table.reviewedAt} is not null
+      ) or (
+        ${table.status} in ('pending', 'reviewing') and ${table.resolvedArtworkId} is null and ${table.reviewedAt} is null
+      )`,
+    ),
+  ],
+);
+
+export const catalogState = sqliteTable(
+  "catalog_state",
+  {
+    id: integer("id").primaryKey(),
+    version: integer("version").notNull(),
+  },
+  (table) => [
+    check("catalog_state_singleton_check", sql`${table.id} = 1`),
+    check("catalog_state_version_check", sql`${table.version} > 0`),
+  ],
+);
+
+export const catalogImportGuard = sqliteTable(
+  "catalog_import_guard",
+  {
+    id: integer("id").primaryKey(),
+    valid: integer("valid").notNull(),
+  },
+  (table) => [
+    check("catalog_import_guard_singleton_check", sql`${table.id} = 1`),
+    check("catalog_import_guard_valid_check", sql`${table.valid} = 1`),
+  ],
+);
+
+export const submissionRateLimit = sqliteTable(
+  "submission_rate_limit",
+  {
+    clientHash: text("client_hash").primaryKey(),
+    windowStartedAt: integer("window_started_at").notNull(),
+    count: integer("count").notNull(),
+  },
+  (table) => [
+    check("submission_rate_limit_hash_check", sql`length(${table.clientHash}) = 64`),
+    check("submission_rate_limit_count_check", sql`${table.count} between 1 and 6`),
+  ],
+);
+
 export const sourceRelations = relations(source, ({ many }) => ({
   artworks: many(artwork),
   galleries: many(gallery),

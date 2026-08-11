@@ -12,6 +12,7 @@ const migrationFiles = [
   "0002_early_iron_fist.sql",
   "0003_curated_artifact_seed.sql",
   "0004_slim_zarek.sql",
+  "0005_tired_reavers.sql",
 ];
 let sqlite;
 
@@ -50,6 +51,10 @@ class TestPreparedStatement {
   execute() {
     this.database.query(this.sql).run(...this.values);
     return { success: true };
+  }
+
+  async first() {
+    return this.database.query(this.sql).get(...this.values) ?? null;
   }
 }
 
@@ -196,14 +201,17 @@ function validBatch() {
   };
 }
 
-function importRequest(batch, { authorization = `Bearer ${SECRET}`, url } = {}) {
+function importRequest(
+  batch,
+  { authorization = `Bearer ${SECRET}`, expectedCatalogVersion = 1, raw = false, url } = {},
+) {
   return new Request(url ?? "https://api.art.jpamorgan.com/internal/art-import", {
     method: "POST",
     headers: {
       Authorization: authorization,
       "Content-Type": "application/json",
     },
-    body: JSON.stringify(batch),
+    body: JSON.stringify(raw ? batch : { expectedCatalogVersion, batch }),
   });
 }
 
@@ -270,6 +278,32 @@ describe("authenticated artwork imports", () => {
     expect(validation.status).toBe(422);
     expect(await validation.json()).toEqual({ error: "invalid_batch" });
     expect(validationBucket.calls).toEqual({ head: 0, put: 0 });
+
+    const unsafeUrls = validBatch();
+    unsafeUrls.sources[0].url = "https://intranet./source";
+    unsafeUrls.galleries[0].url = "https://router.home.arpa./space";
+    unsafeUrls.artworks[0].sourceUrl = "https://localhost.LocalDomain../work";
+    unsafeUrls.artworks[0].imageSourceUrl = "https://router。home。arpa。/credit";
+    unsafeUrls.artworks[0].artifacts.full.url = "https://127.0.0.1./image.jpg";
+    const unsafeUrlResponse = await handleArtworkImportRequest(importRequest(unsafeUrls), {
+      bucket: validationBucket.value,
+      database: d1(sqlite),
+      secret: SECRET,
+    });
+    expect(unsafeUrlResponse.status).toBe(422);
+    expect(await unsafeUrlResponse.json()).toEqual({ error: "invalid_batch" });
+    expect(validationBucket.calls).toEqual({ head: 0, put: 0 });
+
+    const legacyRawBatch = await handleArtworkImportRequest(
+      importRequest(validBatch(), { raw: true }),
+      {
+        bucket: validationBucket.value,
+        database: d1(sqlite),
+        secret: SECRET,
+      },
+    );
+    expect(legacyRawBatch.status).toBe(422);
+    expect(await legacyRawBatch.json()).toEqual({ error: "invalid_batch" });
 
     const mediaBucket = r2();
     const permanentMediaFailure = await handleArtworkImportRequest(
@@ -356,6 +390,7 @@ describe("authenticated artwork imports", () => {
     expect(first.status).toBe(200);
     expect(await first.json()).toEqual({
       artworkIds: ["dynamic-rhythm-study"],
+      catalogVersion: 2,
       uploaded: 2,
       reused: 0,
     });
@@ -412,12 +447,13 @@ describe("authenticated artwork imports", () => {
     ).toEqual(["dynamic-abstract", "dynamic-conceptual"]);
 
     const second = await handleArtworkImportRequest(
-      importRequest(batch),
+      importRequest(batch, { expectedCatalogVersion: 2 }),
       dependencies(bucket, fetcher),
     );
     expect(second.status).toBe(200);
     expect(await second.json()).toEqual({
       artworkIds: ["dynamic-rhythm-study"],
+      catalogVersion: 3,
       uploaded: 0,
       reused: 2,
     });
@@ -439,12 +475,13 @@ describe("authenticated artwork imports", () => {
     changed.artworks[0].artifacts.thumbnail.version = "social-post-4242-v2";
 
     const update = await handleArtworkImportRequest(
-      importRequest(changed),
+      importRequest(changed, { expectedCatalogVersion: 3 }),
       dependencies(bucket, fetcher),
     );
     expect(update.status).toBe(200);
     expect(await update.json()).toEqual({
       artworkIds: ["dynamic-rhythm-study"],
+      catalogVersion: 4,
       uploaded: 2,
       reused: 0,
     });
@@ -465,6 +502,123 @@ describe("authenticated artwork imports", () => {
         .query("SELECT count(*) AS count FROM artwork_style WHERE artwork_id = ?")
         .get("dynamic-rhythm-study").count,
     ).toBe(1);
+  });
+
+  test("canonicalizes public trailing-dot hosts throughout an import", async () => {
+    const bucket = r2();
+    const batch = validBatch();
+    batch.sources[3].url = "https://Social.Example.COM./";
+    batch.galleries[3].url = "https://Social.Example.COM.../space";
+    batch.artworks[0].sourceUrl = "https://Social.Example.COM./works/4242";
+    batch.artworks[0].imageSourceUrl = "https://Social.Example.COM./image-credit";
+    batch.artworks[0].artifacts.full.url = "https://Images.Example.COM./full.jpg";
+    batch.artworks[0].artifacts.thumbnail.url = "https://Images.Example.COM.../thumb.jpg";
+    const response = await handleArtworkImportRequest(importRequest(batch), {
+      ...dependencies(
+        bucket,
+        async () =>
+          new Response(jpegBytes(), { headers: { "Content-Type": ARTIFACT_CONTENT_TYPE } }),
+      ),
+    });
+    expect(response.status).toBe(200);
+    expect(
+      sqlite
+        .query(
+          `SELECT source_url, image_source_url, image_url, thumbnail_url
+           FROM artwork WHERE id = 'dynamic-rhythm-study'`,
+        )
+        .get(),
+    ).toEqual({
+      source_url: "https://social.example.com/works/4242",
+      image_source_url: "https://social.example.com/image-credit",
+      image_url: "https://images.example.com/full.jpg",
+      thumbnail_url: "https://images.example.com/thumb.jpg",
+    });
+    expect(sqlite.query("SELECT url FROM source WHERE id = 'dynamic-social'").get()).toEqual({
+      url: "https://social.example.com/",
+    });
+    expect(sqlite.query("SELECT url FROM gallery WHERE id = 'dynamic-social-space'").get()).toEqual(
+      { url: "https://social.example.com/space" },
+    );
+  });
+
+  test("rejects stale exports before they can overwrite shared catalog entities", async () => {
+    const bucket = r2();
+    const fetcher = async () =>
+      new Response(jpegBytes(), { headers: { "Content-Type": ARTIFACT_CONTENT_TYPE } });
+    const newer = validBatch();
+    newer.sources[3].name = "Newer source";
+    newer.galleries[3].name = "Newer gallery";
+    newer.categories[0].name = "Newer category";
+    newer.styles[0].name = "Newer style";
+    newer.artworks[0].title = "Newer artwork";
+
+    const imported = await handleArtworkImportRequest(
+      importRequest(newer),
+      dependencies(bucket, fetcher),
+    );
+    expect(imported.status).toBe(200);
+    expect((await imported.json()).catalogVersion).toBe(2);
+
+    const stale = structuredClone(newer);
+    stale.sources[3].name = "Stale source";
+    stale.galleries[3].name = "Stale gallery";
+    stale.categories[0].name = "Stale category";
+    stale.styles[0].name = "Stale style";
+    stale.artworks[0].title = "Stale artwork";
+    const rejected = await handleArtworkImportRequest(
+      importRequest(stale, { expectedCatalogVersion: 1 }),
+      dependencies(bucket, fetcher),
+    );
+    expect(rejected.status).toBe(409);
+    expect(await rejected.json()).toEqual({ error: "catalog_conflict" });
+    expect(sqlite.query("SELECT version FROM catalog_state WHERE id = 1").get()).toEqual({
+      version: 2,
+    });
+    expect(sqlite.query("SELECT name FROM source WHERE id = ?").get("dynamic-social")).toEqual({
+      name: "Newer source",
+    });
+    expect(
+      sqlite.query("SELECT name FROM gallery WHERE id = ?").get("dynamic-social-space"),
+    ).toEqual({ name: "Newer gallery" });
+    expect(
+      sqlite.query("SELECT name FROM category WHERE id = ?").get("dynamic-category-painting"),
+    ).toEqual({ name: "Newer category" });
+    expect(
+      sqlite.query("SELECT name FROM style WHERE id = ?").get("dynamic-style-abstract"),
+    ).toEqual({ name: "Newer style" });
+    expect(
+      sqlite.query("SELECT title FROM artwork WHERE id = ?").get("dynamic-rhythm-study"),
+    ).toEqual({ title: "Newer artwork" });
+  });
+
+  test("atomically rejects a catalog version race inside the D1 batch", async () => {
+    const bucket = r2();
+    const database = d1(sqlite);
+    const transactionalBatch = database.batch;
+    database.batch = async (statements) => {
+      sqlite.query("UPDATE catalog_state SET version = 2 WHERE id = 1").run();
+      return transactionalBatch(statements);
+    };
+    const response = await handleArtworkImportRequest(importRequest(validBatch()), {
+      ...dependencies(
+        bucket,
+        async () =>
+          new Response(jpegBytes(), { headers: { "Content-Type": ARTIFACT_CONTENT_TYPE } }),
+      ),
+      database,
+    });
+    expect(response.status).toBe(409);
+    expect(await response.json()).toEqual({ error: "catalog_conflict" });
+    expect(sqlite.query("SELECT version FROM catalog_state WHERE id = 1").get()).toEqual({
+      version: 2,
+    });
+    expect(
+      sqlite.query("SELECT count(*) AS count FROM source WHERE id = ?").get("dynamic-social"),
+    ).toEqual({ count: 0 });
+    expect(sqlite.query("SELECT count(*) AS count FROM catalog_import_guard").get()).toEqual({
+      count: 0,
+    });
   });
 
   test("leaves D1 untouched on partial R2 failure and safely reuses the completed object on retry", async () => {
@@ -505,6 +659,7 @@ describe("authenticated artwork imports", () => {
     expect(retried.status).toBe(200);
     expect(await retried.json()).toEqual({
       artworkIds: ["dynamic-rhythm-study"],
+      catalogVersion: 2,
       uploaded: 1,
       reused: 1,
     });
@@ -555,6 +710,7 @@ describe("authenticated artwork imports", () => {
     expect(retried.status).toBe(200);
     expect(await retried.json()).toEqual({
       artworkIds: ["dynamic-rhythm-study"],
+      catalogVersion: 2,
       uploaded: 0,
       reused: 2,
     });

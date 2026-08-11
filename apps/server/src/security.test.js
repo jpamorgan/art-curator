@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 
-import { favoriteMutationGuard } from "./security";
+import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 
 const trustedOrigins = ["https://art.jpamorgan.com", "https://api.art.jpamorgan.com"];
 
@@ -80,5 +80,28 @@ describe("favorite mutation origin guard", () => {
     });
     expect(publicResponse.status).toBe(200);
     expect(await publicResponse.text()).toBe("public handler reached");
+  });
+});
+
+describe("public submission origin guard", () => {
+  test("allows the web app and rejects cross-site or missing origins", async () => {
+    const app = new Hono();
+    let mutations = 0;
+    app.use("/submissions", mutationOriginGuard(trustedOrigins));
+    app.post("/submissions", (context) => {
+      mutations += 1;
+      return context.text("handler reached");
+    });
+
+    for (const [origin, expected] of [
+      ["https://art.jpamorgan.com", 200],
+      ["https://attacker.example", 403],
+      [undefined, 403],
+    ]) {
+      const headers = origin ? { Origin: origin } : undefined;
+      const response = await app.request("/submissions", { method: "POST", headers });
+      expect(response.status).toBe(expected);
+    }
+    expect(mutations).toBe(1);
   });
 });

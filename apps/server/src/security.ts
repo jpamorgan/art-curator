@@ -12,7 +12,7 @@ export function isTrustedMutationRequest(
   return origin !== null && trustedOrigins.has(origin);
 }
 
-export function favoriteMutationGuard(origins: readonly string[]): MiddlewareHandler {
+export function mutationOriginGuard(origins: readonly string[]): MiddlewareHandler {
   const trustedOrigins = new Set(origins);
 
   return async (context, next) => {
@@ -23,3 +23,5 @@ export function favoriteMutationGuard(origins: readonly string[]): MiddlewareHan
     await next();
   };
 }
+
+export const favoriteMutationGuard = mutationOriginGuard;
