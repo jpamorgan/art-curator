@@ -41,10 +41,11 @@ export const server = await Worker("server", {
 });
 
 async function syncSeedArtifacts(serverUrl: string, secret: string) {
+  const maxAttempts = 8;
   const total = { uploaded: 0, skipped: 0, objects: 0 };
   for (let offset = 0; offset < 48; offset += 6) {
     let response: Response | undefined;
-    for (let attempt = 0; attempt < 4; attempt += 1) {
+    for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
       try {
         const url = new URL("/internal/artifact-sync", serverUrl);
         url.searchParams.set("offset", String(offset));
@@ -52,11 +53,15 @@ async function syncSeedArtifacts(serverUrl: string, secret: string) {
           method: "POST",
           headers: { Authorization: `Bearer ${secret}` },
         });
-        if (response.ok || (response.status < 500 && response.status !== 429)) break;
+        const retryable =
+          response.status === 404 || response.status === 429 || response.status >= 500;
+        if (response.ok || !retryable) break;
       } catch (error) {
-        if (attempt === 3) throw error;
+        if (attempt === maxAttempts - 1) throw error;
       }
-      if (attempt < 3) await new Promise((resolve) => setTimeout(resolve, 250 * 2 ** attempt));
+      if (attempt < maxAttempts - 1) {
+        await new Promise((resolve) => setTimeout(resolve, Math.min(500 * 2 ** attempt, 5_000)));
+      }
     }
     if (!response?.ok) {
       throw new Error(
