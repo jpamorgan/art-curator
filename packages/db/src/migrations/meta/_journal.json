@@ -1,0 +1,41 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "6",
+      "when": 1786403944636,
+      "tag": "0000_good_kabuki",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "6",
+      "when": 1786403944864,
+      "tag": "0001_seed_curated_artworks",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1786406559516,
+      "tag": "0002_early_iron_fist",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1786406624452,
+      "tag": "0003_curated_artifact_seed",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1786410844748,
+      "tag": "0004_slim_zarek",
+      "breakpoints": true
+    }
+  ]
+}

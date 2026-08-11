@@ -1,0 +1,22 @@
+{
+  "name": "@art/infra",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "dev": "alchemy dev",
+    "deploy": "alchemy deploy --stage production",
+    "destroy": "alchemy destroy --stage production",
+    "test": "bun test src/*.test.js"
+  },
+  "dependencies": {
+    "@art/db": "workspace:*",
+    "dotenv": "catalog:",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@art/config": "workspace:*",
+    "alchemy": "catalog:",
+    "typescript": "catalog:"
+  }
+}
