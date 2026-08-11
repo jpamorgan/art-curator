@@ -14,6 +14,7 @@ const dom = new JSDOM("<!doctype html><html><body></body></html>", {
 
 Object.defineProperties(globalThis, {
   document: { configurable: true, value: dom.window.document },
+  Element: { configurable: true, value: dom.window.Element },
   HTMLElement: { configurable: true, value: dom.window.HTMLElement },
   HTMLDialogElement: { configurable: true, value: dom.window.HTMLDialogElement },
   Node: { configurable: true, value: dom.window.Node },

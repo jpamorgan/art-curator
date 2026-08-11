@@ -1,6 +1,16 @@
 import { createSubmissionSchema, type SubmissionKind } from "@art/api/submission-contract";
 import { env } from "@art/env/web";
-import { ChevronDown, LoaderCircle, Plus, X } from "lucide-react";
+import { Button } from "@art/ui/components/button";
+import { Field, FieldDescription, FieldLabel } from "@art/ui/components/field";
+import { Input } from "@art/ui/components/input";
+import {
+  Select,
+  SelectItem,
+  SelectPopup,
+  SelectTrigger,
+  SelectValue,
+} from "@art/ui/components/select";
+import { LoaderCircle, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
@@ -30,6 +40,7 @@ const SUBMISSION_OPTIONS: ReadonlyArray<{
   },
 ];
 const SUBMISSION_TIMEOUT_MS = 12_000;
+const SUBMISSION_SELECT_ITEMS = SUBMISSION_OPTIONS.map(({ label, value }) => ({ label, value }));
 
 type SubmissionResponse = {
   submission?: { id: string; status: string };
@@ -171,25 +182,27 @@ export default function SubmissionDialog() {
 
   return (
     <>
-      <button
+      <Button
         ref={triggerRef}
         type="button"
+        size="icon"
+        variant="secondary"
         aria-label="Submit art"
         aria-haspopup="dialog"
         aria-expanded={isOpen}
         aria-controls={dialogId}
-        className="relative flex size-12 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-neutral-700 transition-[scale] duration-150 ease-out hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none"
+        className="size-12 rounded-full border-0 bg-neutral-100 text-neutral-700 transition-[scale] duration-150 ease-out hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:size-10"
         onClick={openDialog}
       >
-        <Plus aria-hidden="true" className="size-5 shrink-0 stroke-current" />
-      </button>
+        <Plus aria-hidden="true" className="size-5 shrink-0 stroke-current sm:size-4" />
+      </Button>
 
       <dialog
         ref={dialogRef}
         id={dialogId}
         aria-labelledby={`${dialogId}-title`}
         aria-describedby={`${dialogId}-description`}
-        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-xl overflow-hidden rounded-3xl border-0 bg-white p-0 text-neutral-950 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_20px_60px_rgba(0,0,0,0.20)] backdrop:bg-black/35 open:flex open:flex-col"
+        className="m-auto max-h-[calc(100dvh-1.5rem)] w-[calc(100%-1.5rem)] max-w-lg overflow-hidden rounded-2xl border-0 bg-white p-0 text-neutral-950 shadow-xl/10 ring-1 ring-black/10 backdrop:bg-black/32 backdrop:backdrop-blur-sm open:flex open:flex-col"
         onCancel={(event) => {
           event.preventDefault();
           closeDialog();
@@ -198,68 +211,65 @@ export default function SubmissionDialog() {
           if (event.target === event.currentTarget) closeDialog();
         }}
       >
-        <div className="flex min-h-0 flex-1 flex-col">
-          <header className="flex items-start gap-4 px-5 pt-5 pb-4 sm:px-7 sm:pt-7 sm:pb-5">
+        <div className="flex min-h-0 flex-col">
+          <header className="flex items-start gap-4 px-5 pt-5 pb-4 sm:px-6 sm:pt-6">
             <div className="min-w-0 flex-1">
               <h2
                 id={`${dialogId}-title`}
-                className="text-balance text-2xl/8 font-semibold tracking-[-0.025em] sm:text-3xl/9"
+                className="text-balance text-2xl font-semibold tracking-tight"
               >
                 Submit
               </h2>
               <p
                 id={`${dialogId}-description`}
-                className="text-pretty pt-1 text-base/6 text-neutral-500 sm:text-base/7"
+                className="text-pretty pt-1 text-base/6 text-neutral-500 sm:text-sm/5"
               >
                 Send something you think belongs in the collection.
               </p>
             </div>
-            <button
+            <Button
               type="button"
+              size="icon"
+              variant="ghost"
               aria-label="Close submission dialog"
-              className="flex size-12 shrink-0 items-center justify-center rounded-full text-neutral-500 transition-[scale] duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none"
+              className="size-11 rounded-full border-0 text-neutral-500 transition-[scale] duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:size-10"
               onClick={closeDialog}
             >
-              <X aria-hidden="true" className="size-5 shrink-0 stroke-current" />
-            </button>
+              <X aria-hidden="true" className="size-5 shrink-0 stroke-current sm:size-4" />
+            </Button>
           </header>
 
-          <form className="flex min-h-0 flex-1 flex-col" onSubmit={(event) => void submit(event)}>
-            <div className="flex flex-1 flex-col gap-5 overflow-y-auto overscroll-contain border-t border-black/8 px-5 py-5 sm:px-7 sm:py-6">
-              <div className="grid gap-2 sm:grid-cols-[auto_1fr] sm:items-center sm:gap-4">
-                <label className="inline-grid grid-cols-[1fr_--spacing(8)]">
-                  <span className="sr-only">Submission kind</span>
-                  <select
-                    name="kind"
-                    value={kind}
-                    disabled={isSubmitting}
-                    className="col-span-full row-start-1 min-h-12 cursor-pointer appearance-none rounded-full bg-white py-2 pr-9 pl-4 text-base text-neutral-950 ring-1 ring-black/15 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:bg-neutral-50 disabled:text-neutral-500"
-                    onChange={(event) => {
-                      setKind(event.currentTarget.value as SubmissionKind);
-                      setError(null);
-                    }}
-                  >
+          <form className="flex min-h-0 flex-col" onSubmit={(event) => void submit(event)}>
+            <div className="grid gap-5 overflow-y-auto overscroll-contain border-t border-black/8 px-5 py-5 sm:px-6 sm:py-6">
+              <Field>
+                <FieldLabel>Submission type</FieldLabel>
+                <Select
+                  name="kind"
+                  items={SUBMISSION_SELECT_ITEMS}
+                  value={kind}
+                  disabled={isSubmitting}
+                  onValueChange={(value) => {
+                    if (!value) return;
+                    setKind(value as SubmissionKind);
+                    setError(null);
+                  }}
+                >
+                  <SelectTrigger aria-label="Submission kind" size="lg">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectPopup portalProps={{ container: dialogRef }}>
                     {SUBMISSION_OPTIONS.map((option) => (
-                      <option key={option.value} value={option.value}>
+                      <SelectItem key={option.value} value={option.value}>
                         {option.label}
-                      </option>
+                      </SelectItem>
                     ))}
-                  </select>
-                  <ChevronDown
-                    aria-hidden="true"
-                    className="pointer-events-none col-start-2 row-start-1 size-4 shrink-0 place-self-center stroke-neutral-500"
-                  />
-                </label>
-                <p id={helperId} className="text-pretty text-base/6 text-neutral-500 sm:text-sm/6">
-                  {selected.helper}
-                </p>
-              </div>
+                  </SelectPopup>
+                </Select>
+              </Field>
 
-              <div className="flex flex-col gap-2">
-                <label htmlFor={`${dialogId}-url`} className="sr-only">
-                  Public URL
-                </label>
-                <input
+              <Field invalid={Boolean(error)}>
+                <FieldLabel htmlFor={`${dialogId}-url`}>Public URL</FieldLabel>
+                <Input
                   ref={inputRef}
                   id={`${dialogId}-url`}
                   name="url"
@@ -276,36 +286,44 @@ export default function SubmissionDialog() {
                   aria-describedby={error ? `${helperId} ${errorId}` : helperId}
                   aria-invalid={error ? true : undefined}
                   disabled={isSubmitting}
-                  className="min-h-13 w-full min-w-0 rounded-2xl bg-white px-4 py-3 text-base text-neutral-950 ring-1 ring-black/20 outline-none placeholder:text-neutral-400 focus-visible:ring-0 focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:bg-neutral-50 disabled:text-neutral-500"
+                  size="lg"
                   onChange={(event) => {
                     setUrl(event.currentTarget.value);
                     if (error) setError(null);
                   }}
                 />
-                <p
-                  id={errorId}
-                  role={error ? "alert" : undefined}
-                  className="min-h-5 text-pretty text-base/5 text-red-700 sm:text-sm/5"
-                >
-                  {error}
-                </p>
-              </div>
+                <FieldDescription id={helperId} className="text-pretty text-base/5 sm:text-sm/5">
+                  {selected.helper}.
+                </FieldDescription>
+                {error ? (
+                  <p
+                    id={errorId}
+                    role="alert"
+                    className="text-pretty text-base/5 text-red-700 sm:text-sm/5"
+                  >
+                    {error}
+                  </p>
+                ) : null}
+              </Field>
             </div>
 
-            <footer className="grid grid-cols-2 gap-2 border-t border-black/8 p-4 sm:flex sm:items-center sm:justify-between sm:px-7 sm:py-5">
-              <button
+            <footer className="grid grid-cols-2 gap-2 border-t border-black/8 bg-neutral-50/80 px-5 py-4 sm:flex sm:items-center sm:justify-end sm:px-6">
+              <Button
                 type="button"
+                size="lg"
+                variant="secondary"
                 disabled={isSubmitting}
-                className="min-h-12 rounded-full bg-neutral-100 px-4 text-base font-medium text-neutral-950 transition-[scale] duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-50 motion-reduce:transition-none sm:text-sm"
+                className="h-11 rounded-lg border-0 px-4 text-base transition-[scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] motion-reduce:transition-none sm:h-10 sm:text-sm"
                 onClick={closeDialog}
               >
                 Cancel
-              </button>
-              <button
+              </Button>
+              <Button
                 type="submit"
+                size="lg"
                 aria-busy={isSubmitting}
                 disabled={isSubmitting || url.trim().length === 0}
-                className="flex min-h-12 items-center justify-center gap-2 rounded-full bg-neutral-950 px-4 text-base font-medium text-white transition-[scale] duration-150 ease-out hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400 motion-reduce:transition-none sm:text-sm"
+                className="h-11 rounded-lg px-4 text-base transition-[scale] duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-not-allowed disabled:bg-neutral-200 disabled:text-neutral-400 motion-reduce:transition-none sm:h-10 sm:text-sm"
               >
                 {isSubmitting ? (
                   <LoaderCircle
@@ -314,7 +332,7 @@ export default function SubmissionDialog() {
                   />
                 ) : null}
                 {isSubmitting ? "Submitting…" : "Submit"}
-              </button>
+              </Button>
             </footer>
           </form>
         </div>
