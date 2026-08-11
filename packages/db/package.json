@@ -1,0 +1,30 @@
+{
+  "name": "@art/db",
+  "type": "module",
+  "exports": {
+    ".": {
+      "default": "./src/index.ts"
+    },
+    "./*": {
+      "default": "./src/*.ts"
+    }
+  },
+  "scripts": {
+    "check-types": "tsc --noEmit",
+    "db:generate": "drizzle-kit generate",
+    "test": "bun test src/**/*.test.js"
+  },
+  "dependencies": {
+    "@art/env": "workspace:*",
+    "@libsql/client": "0.17.4",
+    "dotenv": "catalog:",
+    "drizzle-orm": "^0.45.2",
+    "libsql": "0.5.29",
+    "zod": "catalog:"
+  },
+  "devDependencies": {
+    "@art/config": "workspace:*",
+    "drizzle-kit": "^0.31.10",
+    "typescript": "catalog:"
+  }
+}

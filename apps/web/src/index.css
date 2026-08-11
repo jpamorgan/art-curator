@@ -1,0 +1,24 @@
+@import "@fontsource-variable/inter";
+@import "@art/ui/globals.css";
+
+html {
+  scrollbar-gutter: stable;
+}
+
+body {
+  margin: 0;
+  min-width: 20rem;
+  background: white;
+}
+
+button,
+a,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+}
