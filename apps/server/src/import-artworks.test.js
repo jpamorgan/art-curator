@@ -13,6 +13,8 @@ const migrationFiles = [
   "0003_curated_artifact_seed.sql",
   "0004_slim_zarek.sql",
   "0005_tired_reavers.sql",
+  "0006_nappy_marvex.sql",
+  "0007_classy_ma_gnuci.sql",
 ];
 let sqlite;
 

@@ -1,51 +1,17 @@
-import { createSubmissionSchema, type SubmissionKind } from "@art/api/submission-contract";
+import { createSubmissionSchema } from "@art/api/submission-contract";
 import { env } from "@art/env/web";
 import { Button } from "@art/ui/components/button";
 import { Field, FieldDescription, FieldLabel } from "@art/ui/components/field";
 import { Input } from "@art/ui/components/input";
-import {
-  Select,
-  SelectItem,
-  SelectPopup,
-  SelectTrigger,
-  SelectValue,
-} from "@art/ui/components/select";
 import { LoaderCircle, Plus, X } from "lucide-react";
 import { useEffect, useId, useRef, useState } from "react";
 import { toast } from "sonner";
 
-const SUBMISSION_OPTIONS: ReadonlyArray<{
-  value: SubmissionKind;
-  label: string;
-  helper: string;
-  placeholder: string;
-}> = [
-  {
-    value: "artwork",
-    label: "Artwork",
-    helper: "Use an X, Instagram, or artwork page URL",
-    placeholder: "https://x.com/artist/status/…",
-  },
-  {
-    value: "artist",
-    label: "Artist",
-    helper: "Use an artist profile or portfolio URL",
-    placeholder: "https://artist.example.com",
-  },
-  {
-    value: "collection",
-    label: "Gallery / Collection",
-    helper: "Use a gallery, museum, or collection URL",
-    placeholder: "https://gallery.example.com",
-  },
-];
 const SUBMISSION_TIMEOUT_MS = 12_000;
-const SUBMISSION_SELECT_ITEMS = SUBMISSION_OPTIONS.map(({ label, value }) => ({ label, value }));
 
 type SubmissionResponse = {
-  submission?: { id: string; status: string };
-  alreadyReceived?: boolean;
-  reopened?: boolean;
+  link?: { id: string; url: string; createdAt: string };
+  alreadySaved?: boolean;
   error?: string;
 };
 
@@ -58,13 +24,11 @@ export default function SubmissionDialog() {
   const timeoutRef = useRef<number | null>(null);
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [kind, setKind] = useState<SubmissionKind>("artwork");
   const [url, setUrl] = useState("");
   const [error, setError] = useState<string | null>(null);
   const dialogId = useId();
   const helperId = useId();
   const errorId = useId();
-  const selected = SUBMISSION_OPTIONS.find((option) => option.value === kind)!;
 
   useEffect(() => {
     const dialog = dialogRef.current;
@@ -110,7 +74,6 @@ export default function SubmissionDialog() {
     setIsSubmitting(false);
     setError(null);
     setUrl("");
-    setKind("artwork");
     setIsOpen(false);
   }
 
@@ -118,7 +81,7 @@ export default function SubmissionDialog() {
     event.preventDefault();
     if (isSubmitting) return;
 
-    const parsed = createSubmissionSchema.safeParse({ kind, url });
+    const parsed = createSubmissionSchema.safeParse({ url });
     if (!parsed.success) {
       setError("Enter a public HTTPS URL.");
       return;
@@ -146,8 +109,6 @@ export default function SubmissionDialog() {
       if (!response.ok) {
         if (response.status === 403) {
           setError("This form could not be verified. Refresh and try again.");
-        } else if (response.status === 429) {
-          setError("Submission limit reached. Try again later.");
         } else if (body.error === "invalid_submission") {
           setError("Enter a public HTTPS URL.");
         } else {
@@ -157,13 +118,7 @@ export default function SubmissionDialog() {
       }
 
       closeDialog();
-      toast.success(
-        body.reopened
-          ? "Thanks — we reopened this submission for review."
-          : body.alreadyReceived
-            ? "Already received — thanks for the reminder."
-            : "Thanks — your submission is in the review queue.",
-      );
+      toast.success(body.alreadySaved ? "Already in the inbox." : "Saved to the inbox.");
     } catch (caught) {
       if (caught instanceof Error && caught.name === "AbortError") {
         if (timedOut) setError("The submission timed out. Try again.");
@@ -218,13 +173,13 @@ export default function SubmissionDialog() {
                 id={`${dialogId}-title`}
                 className="text-balance text-2xl font-semibold tracking-tight"
               >
-                Submit
+                Add a link
               </h2>
               <p
                 id={`${dialogId}-description`}
                 className="text-pretty pt-1 text-base/6 text-neutral-500 sm:text-sm/5"
               >
-                Send something you think belongs in the collection.
+                Save something to consider for the collection.
               </p>
             </div>
             <Button
@@ -241,34 +196,8 @@ export default function SubmissionDialog() {
 
           <form className="flex min-h-0 flex-col" onSubmit={(event) => void submit(event)}>
             <div className="grid gap-5 overflow-y-auto overscroll-contain border-t border-black/8 px-5 py-5 sm:px-6 sm:py-6">
-              <Field>
-                <FieldLabel>Submission type</FieldLabel>
-                <Select
-                  name="kind"
-                  items={SUBMISSION_SELECT_ITEMS}
-                  value={kind}
-                  disabled={isSubmitting}
-                  onValueChange={(value) => {
-                    if (!value) return;
-                    setKind(value as SubmissionKind);
-                    setError(null);
-                  }}
-                >
-                  <SelectTrigger aria-label="Submission kind" size="lg">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectPopup portalProps={{ container: dialogRef }}>
-                    {SUBMISSION_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>
-                        {option.label}
-                      </SelectItem>
-                    ))}
-                  </SelectPopup>
-                </Select>
-              </Field>
-
               <Field invalid={Boolean(error)}>
-                <FieldLabel htmlFor={`${dialogId}-url`}>Public URL</FieldLabel>
+                <FieldLabel htmlFor={`${dialogId}-url`}>Link</FieldLabel>
                 <Input
                   ref={inputRef}
                   id={`${dialogId}-url`}
@@ -282,7 +211,7 @@ export default function SubmissionDialog() {
                   autoFocus
                   required
                   value={url}
-                  placeholder={selected.placeholder}
+                  placeholder="https://…"
                   aria-describedby={error ? `${helperId} ${errorId}` : helperId}
                   aria-invalid={error ? true : undefined}
                   disabled={isSubmitting}
@@ -293,7 +222,7 @@ export default function SubmissionDialog() {
                   }}
                 />
                 <FieldDescription id={helperId} className="text-pretty text-base/5 sm:text-sm/5">
-                  {selected.helper}.
+                  Artwork, artist, gallery, museum, or collection.
                 </FieldDescription>
                 {error ? (
                   <p
@@ -331,7 +260,7 @@ export default function SubmissionDialog() {
                     className="size-4 shrink-0 animate-spin stroke-current motion-reduce:animate-none"
                   />
                 ) : null}
-                {isSubmitting ? "Submitting…" : "Submit"}
+                {isSubmitting ? "Saving…" : "Save link"}
               </Button>
             </footer>
           </form>

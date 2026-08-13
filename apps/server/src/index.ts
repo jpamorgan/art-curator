@@ -20,9 +20,8 @@ import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
 import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 import {
   handleCreateSubmissionRequest,
-  handleGetSubmissionRequest,
   handleListSubmissionsRequest,
-  handleResolveSubmissionRequest,
+  handleRemoveSubmissionRequest,
 } from "./submissions";
 
 const app = new Hono();
@@ -32,7 +31,7 @@ app.use(
   "/*",
   cors({
     origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "PATCH", "OPTIONS"],
+    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
     allowHeaders: ["Content-Type", "Authorization"],
     credentials: true,
   }),
@@ -73,23 +72,16 @@ app.use("/submissions", guardSubmissionMutation);
 app.post("/submissions", (c) =>
   handleCreateSubmissionRequest(c.req.raw, {
     database: env.DB,
-    secret: env.ART_IMPORT_SECRET,
   }),
 );
-app.get("/internal/submissions", (c) =>
+app.get("/internal/inbox", (c) =>
   handleListSubmissionsRequest(c.req.raw, {
     database: env.DB,
     secret: env.ART_IMPORT_SECRET,
   }),
 );
-app.get("/internal/submissions/:id", (c) =>
-  handleGetSubmissionRequest(c.req.raw, c.req.param("id"), {
-    database: env.DB,
-    secret: env.ART_IMPORT_SECRET,
-  }),
-);
-app.patch("/internal/submissions/:id", (c) =>
-  handleResolveSubmissionRequest(c.req.raw, c.req.param("id"), {
+app.delete("/internal/inbox/:id", (c) =>
+  handleRemoveSubmissionRequest(c.req.raw, c.req.param("id"), {
     database: env.DB,
     secret: env.ART_IMPORT_SECRET,
   }),

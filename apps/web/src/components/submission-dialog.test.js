@@ -68,9 +68,13 @@ function deferred() {
 function openAndFill(view, url = "https://example.com/work") {
   const trigger = view.getByRole("button", { name: "Submit art" });
   fireEvent.click(trigger);
-  const input = view.getByRole("textbox", { name: "Public URL" });
+  const input = view.getByRole("textbox", { name: "Link" });
   fireEvent.change(input, { target: { value: url } });
   return { input, trigger };
+}
+
+function submit(view) {
+  fireEvent.submit(view.getByRole("button", { name: "Save link" }).closest("form"));
 }
 
 afterEach(() => {
@@ -84,11 +88,11 @@ describe("SubmissionDialog", () => {
   test("opens with input focus and returns focus after close", async () => {
     const view = render(createElement(SubmissionDialog));
     const trigger = view.getByRole("button", { name: "Submit art" });
-    trigger.focus();
+    act(() => trigger.focus());
     fireEvent.click(trigger);
 
-    const dialog = view.getByRole("dialog", { name: "Submit" });
-    const input = view.getByRole("textbox", { name: "Public URL" });
+    const dialog = view.getByRole("dialog", { name: "Add a link" });
+    const input = view.getByRole("textbox", { name: "Link" });
     expect(dialog.open).toBe(true);
     expect(document.activeElement).toBe(input);
     expect(document.documentElement.style.overflow).toBe("hidden");
@@ -97,74 +101,60 @@ describe("SubmissionDialog", () => {
     await waitFor(() => expect(dialog.open).toBe(false));
     expect(document.activeElement).toBe(trigger);
     expect(document.documentElement.style.overflow).toBe("");
-
-    fireEvent.click(trigger);
-    expect(dialog.open).toBe(true);
-    fireEvent.click(dialog);
-    await waitFor(() => expect(dialog.open).toBe(false));
-    expect(document.activeElement).toBe(trigger);
   });
 
   test("rejects an unsafe URL without a request", async () => {
     const view = render(createElement(SubmissionDialog));
     openAndFill(view, "http://localhost/work");
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
+    submit(view);
 
     expect((await view.findByRole("alert")).textContent).toContain("Enter a public HTTPS URL.");
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
-  test("prevents duplicate submits and reports duplicate and rate-limit results", async () => {
-    const pending = deferred();
-    fetchMock.mockImplementationOnce(() => pending.promise);
+  test("saves just the URL and reports a new link", async () => {
+    fetchMock.mockResolvedValueOnce(
+      response(
+        {
+          link: {
+            id: "00000000-0000-4000-8000-000000000001",
+            url: "https://example.com/work",
+            createdAt: "2026-08-13T12:00:00.000Z",
+          },
+          alreadySaved: false,
+        },
+        201,
+      ),
+    );
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
-    const form = view.getByRole("button", { name: "Submit" }).closest("form");
-    fireEvent.submit(form);
-    fireEvent.submit(form);
-    expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(view.getByRole("button", { name: "Submitting…" }).disabled).toBe(true);
+    submit(view);
 
-    await act(async () => {
-      pending.resolve(
-        response({
-          submission: { id: "one", status: "pending" },
-          alreadyReceived: true,
-          reopened: false,
-        }),
-      );
-      await pending.promise;
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Saved to the inbox."));
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toEqual({
+      url: "https://example.com/work",
     });
-    await waitFor(() =>
-      expect(toastSuccess).toHaveBeenCalledWith("Already received — thanks for the reminder."),
-    );
-
-    fetchMock.mockResolvedValueOnce(response({ error: "submission_rate_limited" }, 429));
-    openAndFill(view, "https://example.com/another-work");
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
-    expect((await view.findByRole("alert")).textContent).toContain(
-      "Submission limit reached. Try again later.",
-    );
   });
 
-  test("reports a newly queued submission", async () => {
+  test("reports a link that is already in the inbox", async () => {
     fetchMock.mockResolvedValueOnce(
       response({
-        submission: { id: "new", status: "pending" },
-        alreadyReceived: false,
-        reopened: false,
+        link: {
+          id: "00000000-0000-4000-8000-000000000001",
+          url: "https://example.com/work",
+          createdAt: "2026-08-13T12:00:00.000Z",
+        },
+        alreadySaved: true,
       }),
     );
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
+    submit(view);
 
-    await waitFor(() =>
-      expect(toastSuccess).toHaveBeenCalledWith("Thanks — your submission is in the review queue."),
-    );
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Already in the inbox."));
   });
 
-  test("an old aborted request cannot clear a newer submission's loading state", async () => {
+  test("prevents duplicate submits and keeps a newer request loading", async () => {
     const first = deferred();
     const second = deferred();
     fetchMock
@@ -173,36 +163,41 @@ describe("SubmissionDialog", () => {
     const view = render(createElement(SubmissionDialog));
 
     openAndFill(view, "https://example.com/first");
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
+    submit(view);
+    fireEvent.submit(view.getByRole("button", { name: "Saving…" }).closest("form"));
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+
     const firstSignal = fetchMock.mock.calls[0][1].signal;
     fireEvent.click(view.getByRole("button", { name: "Close submission dialog" }));
     expect(firstSignal.aborted).toBe(true);
 
     openAndFill(view, "https://example.com/second");
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
-    expect(fetchMock).toHaveBeenCalledTimes(2);
-
+    submit(view);
     await act(async () => {
       const abortError = new Error("aborted");
       abortError.name = "AbortError";
       first.reject(abortError);
       await first.promise.catch(() => {});
     });
-    expect(view.getByRole("button", { name: "Submitting…" }).disabled).toBe(true);
+    expect(view.getByRole("button", { name: "Saving…" }).disabled).toBe(true);
 
     await act(async () => {
       second.resolve(
-        response({
-          submission: { id: "two", status: "pending" },
-          alreadyReceived: false,
-          reopened: true,
-        }),
+        response(
+          {
+            link: {
+              id: "00000000-0000-4000-8000-000000000002",
+              url: "https://example.com/second",
+              createdAt: "2026-08-13T12:00:01.000Z",
+            },
+            alreadySaved: false,
+          },
+          201,
+        ),
       );
       await second.promise;
     });
-    await waitFor(() =>
-      expect(toastSuccess).toHaveBeenCalledWith("Thanks — we reopened this submission for review."),
-    );
+    await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Saved to the inbox."));
   });
 
   test("aborts an in-flight request when unmounted", () => {
@@ -210,7 +205,7 @@ describe("SubmissionDialog", () => {
     fetchMock.mockImplementationOnce(() => pending.promise);
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
-    fireEvent.submit(view.getByRole("button", { name: "Submit" }).closest("form"));
+    submit(view);
     const signal = fetchMock.mock.calls[0][1].signal;
 
     view.unmount();

@@ -11,6 +11,8 @@ const migrationFiles = [
   "0003_curated_artifact_seed.sql",
   "0004_slim_zarek.sql",
   "0005_tired_reavers.sql",
+  "0006_nappy_marvex.sql",
+  "0007_classy_ma_gnuci.sql",
 ];
 const databases = [];
 
@@ -94,33 +96,18 @@ describe("additive D1 migration history", () => {
     ).toEqual(["id", "key", "count", "last_request"]);
     expect(
       database
-        .query("PRAGMA table_info(art_submission)")
+        .query("PRAGMA table_info(art_inbox)")
         .all()
         .map(({ name }) => name),
-    ).toEqual([
-      "id",
-      "kind",
-      "url",
-      "canonical_url",
-      "status",
-      "review_note",
-      "resolved_artwork_id",
-      "created_at",
-      "updated_at",
-      "reviewed_at",
-    ]);
+    ).toEqual(["id", "url", "created_at"]);
     expect(
       database
-        .query("PRAGMA index_list(art_submission)")
+        .query("PRAGMA index_list(art_inbox)")
         .all()
         .map(({ name }) => name),
-    ).toContain("art_submission_status_created_idx");
-    expect(
-      database
-        .query("PRAGMA table_info(submission_rate_limit)")
-        .all()
-        .map(({ name }) => name),
-    ).toEqual(["client_hash", "window_started_at", "count"]);
+    ).toContain("art_inbox_created_idx");
+    expect(database.query("PRAGMA table_info(art_submission)").all()).toEqual([]);
+    expect(database.query("PRAGMA table_info(submission_rate_limit)").all()).toEqual([]);
     expect(database.query("SELECT id, version FROM catalog_state").all()).toEqual([
       { id: 1, version: 1 },
     ]);
@@ -129,61 +116,50 @@ describe("additive D1 migration history", () => {
     });
   });
 
-  test("enforces submission defaults, identity, and inbox checks", async () => {
+  test("enforces the link inbox and catalog guards", async () => {
     const database = await freshDatabase();
     database
-      .query(
-        `INSERT INTO art_submission (id, kind, url, canonical_url)
-         VALUES (?, 'artwork', 'https://example.com/work', 'https://example.com/work')`,
-      )
+      .query("INSERT INTO art_inbox (id, url) VALUES (?, 'https://example.com/work')")
       .run("00000000-0000-4000-8000-000000000001");
-    const row = database
-      .query(
-        `SELECT status, created_at, updated_at, review_note, resolved_artwork_id, reviewed_at
-         FROM art_submission`,
-      )
-      .get();
-    expect(row.status).toBe("pending");
+    const row = database.query("SELECT created_at FROM art_inbox").get();
     expect(row.created_at).toBeNumber();
-    expect(row.updated_at).toBeNumber();
-    expect(row.review_note).toBeNull();
-    expect(row.resolved_artwork_id).toBeNull();
-    expect(row.reviewed_at).toBeNull();
 
     expect(() =>
       database
-        .query(
-          `INSERT INTO art_submission (id, kind, url, canonical_url)
-           VALUES (?, 'artist', 'https://example.com/work', 'https://example.com/work')`,
-        )
+        .query("INSERT INTO art_inbox (id, url) VALUES (?, 'https://example.com/work')")
         .run("00000000-0000-4000-8000-000000000002"),
     ).toThrow();
     for (const statement of [
-      `INSERT INTO art_submission (id, kind, url, canonical_url)
-       VALUES ('bad-kind', 'design', 'https://example.com/a', 'https://example.com/a')`,
-      `INSERT INTO art_submission (id, kind, url, canonical_url, status)
-       VALUES ('bad-status', 'artist', 'https://example.com/b', 'https://example.com/b', 'done')`,
-      `INSERT INTO art_submission (id, kind, url, canonical_url, review_note)
-       VALUES ('bad-note', 'artist', 'https://example.com/c', 'https://example.com/c', '')`,
-      `INSERT INTO art_submission (id, kind, url, canonical_url, status, reviewed_at)
-       VALUES ('bad-accepted', 'artwork', 'https://example.com/d', 'https://example.com/d', 'accepted', 1)`,
-      `INSERT INTO art_submission (id, kind, url, canonical_url, reviewed_at)
-       VALUES ('bad-pending', 'artwork', 'https://example.com/e', 'https://example.com/e', 1)`,
-      `INSERT INTO submission_rate_limit (client_hash, window_started_at, count)
-       VALUES ('raw-address', 1, 1)`,
-      `INSERT INTO submission_rate_limit (client_hash, window_started_at, count)
-       VALUES ('aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa', 1, 7)`,
+      `INSERT INTO art_inbox (id, url) VALUES ('empty-url', '')`,
+      `INSERT INTO art_inbox (id, url) VALUES ('long-url', '${"a".repeat(2_049)}')`,
       `INSERT INTO catalog_state (id, version) VALUES (2, 1)`,
       `UPDATE catalog_state SET version = 0 WHERE id = 1`,
       `INSERT INTO catalog_import_guard (id, valid) VALUES (1, 0)`,
-      `INSERT INTO art_submission
-         (id, kind, url, canonical_url, status, resolved_artwork_id, reviewed_at)
-       VALUES
-         ('bad-reference', 'artwork', 'https://example.com/f', 'https://example.com/f',
-          'accepted', 'missing-artwork', 1)`,
     ]) {
       expect(() => database.exec(statement)).toThrow();
     }
+  });
+
+  test("moves unresolved legacy submissions into the link inbox", async () => {
+    const database = await freshDatabase("0005_tired_reavers.sql");
+    database.exec(`
+      INSERT INTO art_submission (id, kind, url, canonical_url, status, created_at, reviewed_at)
+      VALUES
+        ('pending', 'artwork', 'https://one.example/raw', 'https://one.example/work', 'pending', 1000, null),
+        ('reviewing', 'artist', 'https://two.example/raw', 'https://two.example/', 'reviewing', 2000, null),
+        ('rejected', 'collection', 'https://three.example/raw', 'https://three.example/', 'rejected', 3000, 3000);
+    `);
+
+    await applyMigration(database, "0006_nappy_marvex.sql");
+    await applyMigration(database, "0007_classy_ma_gnuci.sql");
+
+    expect(
+      database.query("SELECT id, url, created_at FROM art_inbox ORDER BY created_at").all(),
+    ).toEqual([
+      { id: "pending", url: "https://one.example/work", created_at: 1000 },
+      { id: "reviewing", url: "https://two.example/", created_at: 2000 },
+    ]);
+    expect(database.query("PRAGMA table_info(art_submission)").all()).toEqual([]);
   });
 
   test("upgrades the historical seed while preserving only mapped saved works", async () => {
