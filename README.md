@@ -40,9 +40,23 @@ bun run check
 bun run build
 ```
 
-## Import
+## Curation API
 
-`POST /internal/art-import` accepts a bounded, normalized artwork batch with a bearer `ART_IMPORT_SECRET`. It upserts sources, galleries, styles, categories, artwork, provenance, and private R2 image artifacts.
+Internal catalog requests use `Authorization: Bearer $ART_IMPORT_SECRET`.
+
+- `GET /internal/artworks?q=<query>&limit=<1-25>` searches artwork identity, source,
+  gallery, and taxonomy fields.
+- `POST /internal/artworks` creates or updates one artwork from a compact draft. The
+  common path references an existing source and gallery by slug; a compact `create`
+  definition handles a genuinely new source or gallery without replaying the catalog
+  graph. Category and style slugs remain references.
+
+The draft includes distinct public HTTPS full and thumbnail JPEG URLs. The server derives
+dimensions, storage identity, public slug, artifact fingerprints, and curation timestamps.
+It returns stable duplicates without another upload, stores private content-addressed R2
+artifacts, writes artwork relationships atomically, and removes an optional inbox row only
+with a created or updated outcome. Duplicate outcomes deliberately keep the inbox row for
+an explicit dismissal decision.
 
 ## Deploy
 

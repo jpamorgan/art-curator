@@ -203,30 +203,6 @@ export const artInbox = sqliteTable(
   ],
 );
 
-export const catalogState = sqliteTable(
-  "catalog_state",
-  {
-    id: integer("id").primaryKey(),
-    version: integer("version").notNull(),
-  },
-  (table) => [
-    check("catalog_state_singleton_check", sql`${table.id} = 1`),
-    check("catalog_state_version_check", sql`${table.version} > 0`),
-  ],
-);
-
-export const catalogImportGuard = sqliteTable(
-  "catalog_import_guard",
-  {
-    id: integer("id").primaryKey(),
-    valid: integer("valid").notNull(),
-  },
-  (table) => [
-    check("catalog_import_guard_singleton_check", sql`${table.id} = 1`),
-    check("catalog_import_guard_valid_check", sql`${table.valid} = 1`),
-  ],
-);
-
 export const sourceRelations = relations(source, ({ many }) => ({
   artworks: many(artwork),
   galleries: many(gallery),

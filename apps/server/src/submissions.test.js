@@ -74,9 +74,9 @@ function internalRequest(path, options = {}) {
   return request(path, { authorization: `Bearer ${SECRET}`, contentType: null, ...options });
 }
 
-async function submit(url, id) {
+async function submit(url, id, database = d1(sqlite)) {
   return handleCreateSubmissionRequest(publicRequest({ url }), {
-    database: d1(sqlite),
+    database,
     createId: () => id,
   });
 }
@@ -137,31 +137,30 @@ describe("public link inbox", () => {
   });
 
   test("stores one canonical URL and treats duplicates as success", async () => {
+    const statements = [];
+    const database = {
+      prepare(sql) {
+        statements.push(sql);
+        return new TestPreparedStatement(sqlite, sql);
+      },
+    };
     const first = await submit(
       "https://Example.COM./work?utm_source=x&b=2&a=1#detail",
       "00000000-0000-4000-8000-000000000001",
+      database,
     );
     const duplicate = await submit(
       "https://example.com/work?a=1&b=2",
       "00000000-0000-4000-8000-000000000002",
+      database,
     );
 
     expect(first.status).toBe(201);
-    expect(await first.json()).toMatchObject({
-      link: {
-        id: "00000000-0000-4000-8000-000000000001",
-        url: "https://example.com/work?a=1&b=2",
-      },
-      alreadySaved: false,
-    });
+    expect(await first.json()).toEqual({ alreadySaved: false });
     expect(duplicate.status).toBe(200);
-    expect(await duplicate.json()).toMatchObject({
-      link: {
-        id: "00000000-0000-4000-8000-000000000001",
-        url: "https://example.com/work?a=1&b=2",
-      },
-      alreadySaved: true,
-    });
+    expect(await duplicate.json()).toEqual({ alreadySaved: true });
+    expect(statements).toHaveLength(2);
+    expect(statements.every((sql) => sql.includes("INSERT INTO art_inbox"))).toBe(true);
     expect(sqlite.query("SELECT url FROM art_inbox").all()).toEqual([
       { url: "https://example.com/work?a=1&b=2" },
     ]);

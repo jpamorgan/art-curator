@@ -1,10 +1,10 @@
 import {
   ARTIFACT_CACHE_CONTROL,
   ARTIFACT_CONTENT_TYPE,
-  artworkArtifactExpectation,
+  ARTIFACT_MINIMUM_BYTES,
+  artworkArtifactMaximumBytes,
+  isArtifactFingerprint,
   isSafeArtworkId,
-  storedArtworkArtifactMatches,
-  type ArtworkArtifactExpectation,
   type ArtworkArtifactVariant,
 } from "@art/db/artifacts";
 import { eq } from "@art/db/query";
@@ -15,12 +15,20 @@ const NOT_FOUND_CACHE_CONTROL = "public, max-age=60";
 type Database = ReturnType<typeof import("@art/db").createDb>;
 type ArtifactBucket = Pick<R2Bucket, "get" | "head">;
 
+type StoredArtworkArtifact = {
+  artworkId: string;
+  variant: ArtworkArtifactVariant;
+  key: string;
+  fingerprint: string;
+  sourceFingerprint: string;
+};
+
 export type ArtifactRequestDependencies = {
   bucket: ArtifactBucket;
   resolveExpectation: (
     artworkId: string,
     variant: ArtworkArtifactVariant,
-  ) => Promise<ArtworkArtifactExpectation | null>;
+  ) => Promise<StoredArtworkArtifact | null>;
 };
 
 export type ArtifactRequestParams = {
@@ -82,9 +90,8 @@ export async function resolveArtworkArtifactExpectation(
   db: Database,
   artworkId: string,
   variant: ArtworkArtifactVariant,
-): Promise<ArtworkArtifactExpectation | null> {
+): Promise<StoredArtworkArtifact | null> {
   const keyColumn = variant === "full" ? artwork.imageR2Key : artwork.thumbnailR2Key;
-  const urlColumn = variant === "full" ? artwork.upstreamImageUrl : artwork.upstreamThumbnailUrl;
   const versionColumn =
     variant === "full" ? artwork.imageSourceVersion : artwork.thumbnailSourceVersion;
   const fingerprintColumn =
@@ -92,23 +99,45 @@ export async function resolveArtworkArtifactExpectation(
   const [row] = await db
     .select({
       key: keyColumn,
-      upstreamUrl: urlColumn,
-      sourceVersion: versionColumn,
+      sourceFingerprint: versionColumn,
       fingerprint: fingerprintColumn,
     })
     .from(artwork)
     .where(eq(artwork.id, artworkId))
     .limit(1);
-  if (!row) return null;
-  const expectation = await artworkArtifactExpectation({
-    artworkId,
-    variant,
-    upstreamUrl: row.upstreamUrl,
-    sourceVersion: row.sourceVersion,
-  });
-  return row.key === expectation.key && row.fingerprint === expectation.fingerprint
-    ? expectation
-    : null;
+  if (!row || !row.key || !isArtifactFingerprint(row.fingerprint)) return null;
+  return { artworkId, variant, ...row };
+}
+
+function storedArtifactMatches(
+  object: R2Object | null,
+  expectation: StoredArtworkArtifact,
+): boolean {
+  if (
+    !object ||
+    object.key !== expectation.key ||
+    object.size < ARTIFACT_MINIMUM_BYTES ||
+    object.size >
+      (expectation.variant === "thumbnail" && object.customMetadata?.contentFingerprint
+        ? 1_500 * 1_024
+        : artworkArtifactMaximumBytes(expectation.variant)) ||
+    object.httpMetadata?.contentType !== ARTIFACT_CONTENT_TYPE
+  ) {
+    return false;
+  }
+  const metadata = object.customMetadata;
+  if (metadata?.contentFingerprint) {
+    return (
+      metadata.contentFingerprint === expectation.fingerprint &&
+      metadata.sourceFingerprint === expectation.sourceFingerprint &&
+      metadata.variant === expectation.variant
+    );
+  }
+  return (
+    metadata?.sourceFingerprint === expectation.fingerprint &&
+    metadata.sourceVersion === expectation.sourceFingerprint &&
+    metadata.variant === expectation.variant
+  );
 }
 
 export async function serveArtworkArtifact(
@@ -128,7 +157,7 @@ export async function serveArtworkArtifact(
   }
 
   const metadata = await dependencies.bucket.head(expectation.key);
-  if (!metadata || !storedArtworkArtifactMatches(metadata, expectation)) {
+  if (!metadata || !storedArtifactMatches(metadata, expectation)) {
     return notFound();
   }
 
@@ -143,7 +172,7 @@ export async function serveArtworkArtifact(
   }
 
   const object = await dependencies.bucket.get(expectation.key);
-  if (!object || !storedArtworkArtifactMatches(object, expectation)) {
+  if (!object || !storedArtifactMatches(object, expectation)) {
     return notFound();
   }
 

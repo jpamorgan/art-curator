@@ -1,33 +1,22 @@
 import { createSubmissionSchema } from "@art/api/submission-contract";
 
+import { BoundedJsonError, readBoundedJson } from "./bounded-json";
 import { authorizeInternalJob } from "./internal-job-auth";
 
 const MAX_JSON_BYTES = 4 * 1_024;
 const DEFAULT_LIST_LIMIT = 50;
 const MAX_LIST_LIMIT = 100;
+const JSON_ERRORS = {
+  media_type: "json_required",
+  content_length: "invalid_content_length",
+  too_large: "payload_too_large",
+  invalid_json: "invalid_json",
+} as const;
+const INBOX_ID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-type InboxDatabase = Pick<D1Database, "prepare">;
-
-type InboxRow = {
-  id: string;
-  url: string;
-  created_at: number;
-};
-
-type InboxDependencies = {
-  database: InboxDatabase;
-  secret: string;
-  createId?: () => string;
-};
-
-class InboxRequestError extends Error {
-  constructor(
-    readonly status: 400 | 401 | 404 | 413 | 415 | 503,
-    readonly code: string,
-  ) {
-    super(code);
-  }
-}
+type InboxRow = { id: string; url: string; created_at: number };
+type PublicDependencies = { database: Pick<D1Database, "prepare">; createId?: () => string };
+type InternalDependencies = { database: Pick<D1Database, "prepare">; secret: string };
 
 function json(body: unknown, status = 200): Response {
   return Response.json(body, {
@@ -36,80 +25,22 @@ function json(body: unknown, status = 200): Response {
   });
 }
 
-export function isJsonMediaType(value: string | null): boolean {
-  return (
-    value !== null &&
-    /^application\/json(?:\s*;\s*charset\s*=\s*(?:utf-8|"utf-8"))?$/i.test(value.trim())
-  );
-}
-
-async function readJson(request: Request): Promise<unknown> {
-  if (!isJsonMediaType(request.headers.get("content-type"))) {
-    throw new InboxRequestError(415, "json_required");
-  }
-
-  const declaredLength = request.headers.get("content-length");
-  if (declaredLength !== null) {
-    const parsedLength = Number(declaredLength);
-    if (!Number.isSafeInteger(parsedLength) || parsedLength < 0) {
-      throw new InboxRequestError(400, "invalid_content_length");
-    }
-    if (parsedLength > MAX_JSON_BYTES) throw new InboxRequestError(413, "payload_too_large");
-  }
-  if (!request.body) throw new InboxRequestError(400, "invalid_json");
-
-  const reader = request.body.getReader();
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  while (true) {
-    const { done, value } = await reader.read();
-    if (done) break;
-    size += value.byteLength;
-    if (size > MAX_JSON_BYTES) {
-      await reader.cancel();
-      throw new InboxRequestError(413, "payload_too_large");
-    }
-    chunks.push(value);
-  }
-
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  try {
-    return JSON.parse(new TextDecoder("utf-8", { fatal: true, ignoreBOM: false }).decode(bytes));
-  } catch {
-    throw new InboxRequestError(400, "invalid_json");
-  }
-}
-
-function inboxIdIsValid(id: string): boolean {
-  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id);
-}
-
-async function authorize(request: Request, secret: string): Promise<void> {
+async function authorizationError(request: Request, secret: string) {
   const result = await authorizeInternalJob(request, secret);
-  if (result === "not_configured") throw new InboxRequestError(503, "inbox_not_configured");
-  if (result === "unauthorized") throw new InboxRequestError(401, "unauthorized");
-}
-
-function inboxJson(row: InboxRow) {
-  return {
-    id: row.id,
-    url: row.url,
-    createdAt: new Date(row.created_at).toISOString(),
-  };
+  if (result === "authorized") return null;
+  return json(
+    { error: result === "unauthorized" ? "unauthorized" : "inbox_not_configured" },
+    result === "unauthorized" ? 401 : 503,
+  );
 }
 
 export async function handleCreateSubmissionRequest(
   request: Request,
-  dependencies: Pick<InboxDependencies, "database" | "createId">,
+  dependencies: PublicDependencies,
 ): Promise<Response> {
   try {
-    const parsed = createSubmissionSchema.safeParse(await readJson(request));
-    if (!parsed.success) throw new InboxRequestError(400, "invalid_submission");
+    const parsed = createSubmissionSchema.safeParse(await readBoundedJson(request, MAX_JSON_BYTES));
+    if (!parsed.success) return json({ error: "invalid_submission" }, 400);
 
     const id = dependencies.createId?.() ?? crypto.randomUUID();
     const result = await dependencies.database
@@ -120,16 +51,12 @@ export async function handleCreateSubmissionRequest(
       )
       .bind(id, parsed.data.url)
       .run();
-    const row = await dependencies.database
-      .prepare("SELECT id, url, created_at FROM art_inbox WHERE url = ?")
-      .bind(parsed.data.url)
-      .first<InboxRow>();
-    if (!row) throw new Error("Inbox insert did not return a record.");
-
     const created = (result.meta.changes ?? 0) === 1;
-    return json({ link: inboxJson(row), alreadySaved: !created }, created ? 201 : 200);
+    return json({ alreadySaved: !created }, created ? 201 : 200);
   } catch (error) {
-    if (error instanceof InboxRequestError) return json({ error: error.code }, error.status);
+    if (error instanceof BoundedJsonError) {
+      return json({ error: JSON_ERRORS[error.reason] }, error.status);
+    }
     console.error("Inbox create failed", error);
     return json({ error: "inbox_unavailable" }, 503);
   }
@@ -137,23 +64,28 @@ export async function handleCreateSubmissionRequest(
 
 export async function handleListSubmissionsRequest(
   request: Request,
-  dependencies: Pick<InboxDependencies, "database" | "secret">,
+  dependencies: InternalDependencies,
 ): Promise<Response> {
+  const denied = await authorizationError(request, dependencies.secret);
+  if (denied) return denied;
+  const rawLimit = new URL(request.url).searchParams.get("limit");
+  const limit = rawLimit === null ? DEFAULT_LIST_LIMIT : Number(rawLimit);
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT) {
+    return json({ error: "invalid_limit" }, 400);
+  }
   try {
-    await authorize(request, dependencies.secret);
-    const rawLimit = new URL(request.url).searchParams.get("limit");
-    const limit = rawLimit === null ? DEFAULT_LIST_LIMIT : Number(rawLimit);
-    if (!Number.isSafeInteger(limit) || limit < 1 || limit > MAX_LIST_LIMIT) {
-      throw new InboxRequestError(400, "invalid_limit");
-    }
-
     const rows = await dependencies.database
       .prepare("SELECT id, url, created_at FROM art_inbox ORDER BY created_at, id LIMIT ?")
       .bind(limit)
       .all<InboxRow>();
-    return json({ links: rows.results.map(inboxJson) });
+    return json({
+      links: rows.results.map(({ id, url, created_at }) => ({
+        id,
+        url,
+        createdAt: new Date(created_at).toISOString(),
+      })),
+    });
   } catch (error) {
-    if (error instanceof InboxRequestError) return json({ error: error.code }, error.status);
     console.error("Inbox list failed", error);
     return json({ error: "inbox_unavailable" }, 503);
   }
@@ -162,21 +94,21 @@ export async function handleListSubmissionsRequest(
 export async function handleRemoveSubmissionRequest(
   request: Request,
   id: string,
-  dependencies: Pick<InboxDependencies, "database" | "secret">,
+  dependencies: InternalDependencies,
 ): Promise<Response> {
+  const denied = await authorizationError(request, dependencies.secret);
+  if (denied) return denied;
+  if (!INBOX_ID.test(id)) return json({ error: "inbox_link_not_found" }, 404);
   try {
-    await authorize(request, dependencies.secret);
-    if (!inboxIdIsValid(id)) throw new InboxRequestError(404, "inbox_link_not_found");
     const result = await dependencies.database
       .prepare("DELETE FROM art_inbox WHERE id = ?")
       .bind(id)
       .run();
     if ((result.meta.changes ?? 0) !== 1) {
-      throw new InboxRequestError(404, "inbox_link_not_found");
+      return json({ error: "inbox_link_not_found" }, 404);
     }
     return json({ removed: true, id });
   } catch (error) {
-    if (error instanceof InboxRequestError) return json({ error: error.code }, error.status);
     console.error("Inbox remove failed", error);
     return json({ error: "inbox_unavailable" }, 503);
   }

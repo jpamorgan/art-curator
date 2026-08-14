@@ -27,13 +27,17 @@ Object.defineProperties(dom.window.HTMLDialogElement.prototype, {
   showModal: {
     configurable: true,
     value() {
+      this.returnFocus = document.activeElement;
       this.open = true;
+      this.querySelector("input")?.focus();
     },
   },
   close: {
     configurable: true,
     value() {
       this.open = false;
+      this.returnFocus?.focus();
+      this.dispatchEvent(new dom.window.Event("close"));
     },
   },
 });
@@ -81,7 +85,6 @@ afterEach(() => {
   cleanup();
   fetchMock.mockReset();
   toastSuccess.mockReset();
-  document.documentElement.style.overflow = "";
 });
 
 describe("SubmissionDialog", () => {
@@ -95,12 +98,14 @@ describe("SubmissionDialog", () => {
     const input = view.getByRole("textbox", { name: "Link" });
     expect(dialog.open).toBe(true);
     expect(document.activeElement).toBe(input);
-    expect(document.documentElement.style.overflow).toBe("hidden");
+    expect(dialog.getAttribute("aria-describedby")).toBe(`${dialog.id}-helper`);
+    expect(input.getAttribute("aria-describedby")).toBe(`${dialog.id}-helper`);
 
-    fireEvent(dialog, new dom.window.Event("cancel", { cancelable: true }));
+    const cancel = new dom.window.Event("cancel", { cancelable: true });
+    fireEvent(dialog, cancel);
+    if (!cancel.defaultPrevented) dialog.close();
     await waitFor(() => expect(dialog.open).toBe(false));
     expect(document.activeElement).toBe(trigger);
-    expect(document.documentElement.style.overflow).toBe("");
   });
 
   test("rejects an unsafe URL without a request", async () => {
@@ -108,24 +113,16 @@ describe("SubmissionDialog", () => {
     openAndFill(view, "http://localhost/work");
     submit(view);
 
-    expect((await view.findByRole("alert")).textContent).toContain("Enter a public HTTPS URL.");
+    const alert = await view.findByRole("alert");
+    expect(alert.textContent).toContain("Enter a public HTTPS URL.");
+    expect(view.getByRole("textbox", { name: "Link" }).getAttribute("aria-describedby")).toBe(
+      `${view.getByRole("dialog").id}-helper ${alert.id}`,
+    );
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
   test("saves just the URL and reports a new link", async () => {
-    fetchMock.mockResolvedValueOnce(
-      response(
-        {
-          link: {
-            id: "00000000-0000-4000-8000-000000000001",
-            url: "https://example.com/work",
-            createdAt: "2026-08-13T12:00:00.000Z",
-          },
-          alreadySaved: false,
-        },
-        201,
-      ),
-    );
+    fetchMock.mockResolvedValueOnce(response({ alreadySaved: false }, 201));
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
     submit(view);
@@ -137,16 +134,7 @@ describe("SubmissionDialog", () => {
   });
 
   test("reports a link that is already in the inbox", async () => {
-    fetchMock.mockResolvedValueOnce(
-      response({
-        link: {
-          id: "00000000-0000-4000-8000-000000000001",
-          url: "https://example.com/work",
-          createdAt: "2026-08-13T12:00:00.000Z",
-        },
-        alreadySaved: true,
-      }),
-    );
+    fetchMock.mockResolvedValueOnce(response({ alreadySaved: true }));
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
     submit(view);
@@ -154,61 +142,54 @@ describe("SubmissionDialog", () => {
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Already in the inbox."));
   });
 
-  test("prevents duplicate submits and keeps a newer request loading", async () => {
-    const first = deferred();
-    const second = deferred();
-    fetchMock
-      .mockImplementationOnce(() => first.promise)
-      .mockImplementationOnce(() => second.promise);
+  test("prevents duplicate submits and closing while a save is pending", async () => {
+    const pending = deferred();
+    fetchMock.mockImplementationOnce(() => pending.promise);
     const view = render(createElement(SubmissionDialog));
 
-    openAndFill(view, "https://example.com/first");
+    openAndFill(view);
     submit(view);
     fireEvent.submit(view.getByRole("button", { name: "Saving…" }).closest("form"));
     expect(fetchMock).toHaveBeenCalledTimes(1);
 
-    const firstSignal = fetchMock.mock.calls[0][1].signal;
-    fireEvent.click(view.getByRole("button", { name: "Close submission dialog" }));
-    expect(firstSignal.aborted).toBe(true);
-
-    openAndFill(view, "https://example.com/second");
-    submit(view);
-    await act(async () => {
-      const abortError = new Error("aborted");
-      abortError.name = "AbortError";
-      first.reject(abortError);
-      await first.promise.catch(() => {});
-    });
-    expect(view.getByRole("button", { name: "Saving…" }).disabled).toBe(true);
+    const dialog = view.getByRole("dialog", { name: "Add a link" });
+    expect(view.getByRole("button", { name: "Cancel" }).disabled).toBe(true);
+    expect(
+      view.getByRole("button", { name: "Saving…" }).querySelector("svg").getAttribute("class"),
+    ).toContain("motion-reduce:animate-none");
+    const cancel = new dom.window.Event("cancel", { cancelable: true });
+    fireEvent(dialog, cancel);
+    expect(cancel.defaultPrevented).toBe(true);
+    expect(dialog.open).toBe(true);
 
     await act(async () => {
-      second.resolve(
-        response(
-          {
-            link: {
-              id: "00000000-0000-4000-8000-000000000002",
-              url: "https://example.com/second",
-              createdAt: "2026-08-13T12:00:01.000Z",
-            },
-            alreadySaved: false,
-          },
-          201,
-        ),
-      );
-      await second.promise;
+      pending.resolve(response({ alreadySaved: false }, 201));
+      await pending.promise;
     });
     await waitFor(() => expect(toastSuccess).toHaveBeenCalledWith("Saved to the inbox."));
+    expect(dialog.open).toBe(false);
   });
 
-  test("aborts an in-flight request when unmounted", () => {
-    const pending = deferred();
-    fetchMock.mockImplementationOnce(() => pending.promise);
+  test("shows a save error and clears it when the link changes", async () => {
+    fetchMock.mockResolvedValueOnce(response({ error: "inbox_unavailable" }, 503));
+    const view = render(createElement(SubmissionDialog));
+    const { input } = openAndFill(view);
+    submit(view);
+
+    expect((await view.findByRole("alert")).textContent).toContain("could not save");
+    fireEvent.change(input, { target: { value: "https://example.com/another" } });
+    expect(view.queryByRole("alert")).toBeNull();
+  });
+
+  test("reports a distinct request timeout", async () => {
+    const timeout = new Error("timed out");
+    timeout.name = "TimeoutError";
+    fetchMock.mockRejectedValueOnce(timeout);
     const view = render(createElement(SubmissionDialog));
     openAndFill(view);
     submit(view);
-    const signal = fetchMock.mock.calls[0][1].signal;
 
-    view.unmount();
-    expect(signal.aborted).toBe(true);
+    expect((await view.findByRole("alert")).textContent).toContain("timed out");
+    expect(fetchMock.mock.calls[0][1].signal).toBeInstanceOf(AbortSignal);
   });
 });

@@ -14,8 +14,8 @@ import { cors } from "hono/cors";
 import { logger } from "hono/logger";
 
 import { resolveArtworkArtifactExpectation, serveArtworkArtifact } from "./artifacts";
-import { handleCatalogArtworkExportRequest, handleCatalogArtworkSearchRequest } from "./catalog";
-import { handleArtworkImportRequest } from "./import-artworks";
+import { handleCatalogArtworkSearchRequest } from "./catalog";
+import { handleArtworkWriteRequest } from "./artworks";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
 import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 import {
@@ -53,8 +53,8 @@ app.on(["GET", "HEAD"], "/artifacts/:artworkId/:filename", (c) => {
   );
 });
 
-app.post("/internal/art-import", (c) =>
-  handleArtworkImportRequest(c.req.raw, {
+app.post("/internal/artworks", (c) =>
+  handleArtworkWriteRequest(c.req.raw, {
     bucket: env.ARTWORKS,
     database: env.DB,
     secret: env.ART_IMPORT_SECRET,
@@ -86,14 +86,8 @@ app.delete("/internal/inbox/:id", (c) =>
     secret: env.ART_IMPORT_SECRET,
   }),
 );
-app.get("/internal/catalog/artworks", (c) =>
+app.get("/internal/artworks", (c) =>
   handleCatalogArtworkSearchRequest(c.req.raw, {
-    database: env.DB,
-    secret: env.ART_IMPORT_SECRET,
-  }),
-);
-app.get("/internal/catalog/artworks/:id", (c) =>
-  handleCatalogArtworkExportRequest(c.req.raw, c.req.param("id"), {
     database: env.DB,
     secret: env.ART_IMPORT_SECRET,
   }),

@@ -60,8 +60,8 @@ function plan(database, sql, value) {
     .join("\n");
 }
 
-describe("additive D1 migration history", () => {
-  test("applies the complete migration history on a fresh database", async () => {
+describe("historical D1 migrations", () => {
+  test("applies the complete history and retains dormant rollout tables", async () => {
     const database = await freshDatabase();
 
     expect(scalar(database, "SELECT count(*) AS value FROM artwork")).toBe(24);
@@ -116,7 +116,7 @@ describe("additive D1 migration history", () => {
     });
   });
 
-  test("enforces the link inbox and catalog guards", async () => {
+  test("enforces the active link inbox and legacy catalog-table constraints", async () => {
     const database = await freshDatabase();
     database
       .query("INSERT INTO art_inbox (id, url) VALUES (?, 'https://example.com/work')")
