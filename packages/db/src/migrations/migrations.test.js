@@ -13,6 +13,7 @@ const migrationFiles = [
   "0005_tired_reavers.sql",
   "0006_nappy_marvex.sql",
   "0007_classy_ma_gnuci.sql",
+  "0008_add_works_on_paper_category.sql",
 ];
 const databases = [];
 
@@ -113,6 +114,17 @@ describe("historical D1 migrations", () => {
     ]);
     expect(database.query("SELECT count(*) AS count FROM catalog_import_guard").get()).toEqual({
       count: 0,
+    });
+    expect(
+      database
+        .query("SELECT id, slug, name, description, sort_order FROM category WHERE id = ?")
+        .get("category-works-on-paper"),
+    ).toEqual({
+      id: "category-works-on-paper",
+      slug: "works-on-paper",
+      name: "Works on Paper",
+      description: "Drawings, watercolors, and other works whose primary support is paper.",
+      sort_order: 3,
     });
   });
 
