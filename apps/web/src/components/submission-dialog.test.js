@@ -88,6 +88,16 @@ afterEach(() => {
 });
 
 describe("SubmissionDialog", () => {
+  test("defines a complete visible focus ring on the icon trigger", () => {
+    const view = render(createElement(SubmissionDialog));
+    const trigger = view.getByRole("button", { name: "Submit art" });
+
+    expect(trigger.className).toContain("focus-visible:outline-2");
+    expect(trigger.className).toContain("focus-visible:outline-offset-2");
+    expect(trigger.className).toContain("focus-visible:outline-solid");
+    expect(trigger.className).toContain("focus-visible:outline-neutral-950");
+  });
+
   test("opens with input focus and returns focus after close", async () => {
     const view = render(createElement(SubmissionDialog));
     const trigger = view.getByRole("button", { name: "Submit art" });

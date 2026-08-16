@@ -74,6 +74,8 @@ describe("SSR and hydrated navigation contract", () => {
     expect(rootSource).toMatch(/function RootDocument\(\{ children \}/u);
     expect(rootSource).toContain("{children}");
     expect(rootSource).not.toContain("component: RootDocument");
+    expect(rootSource).not.toContain("artworks.categories.queryOptions");
+    expect(rootSource).not.toContain("prefetchQuery");
     expect(rootSource).toMatch(/function RootApp\(\)[\s\S]*?<Outlet \/>/u);
     expect(artworkSource).not.toContain("<main");
   });
@@ -153,23 +155,41 @@ describe("SSR and hydrated navigation contract", () => {
     expect(componentSource).not.toMatch(/window\.location\.(?:assign|replace)/u);
 
     const headerSource = await readSource("components/header.tsx");
-    expect(headerSource).not.toMatch(/filters\.map[\s\S]*?<button/u);
-    expect(headerSource).toMatch(/filters\.map[\s\S]*?<Link/u);
+    expect(headerSource).toContain('feed: "for-you"');
+    expect(headerSource).not.toContain("buildHeaderFilters");
+    expect(headerSource).not.toContain("categories.queryOptions");
 
-    const userMenuSource = await readSource("components/user-menu.tsx");
-    expect(userMenuSource).toMatch(/render=\{<Link to="\/favorites" \/>\}/u);
-    expect(userMenuSource).not.toContain('navigate({ to: "/favorites" })');
+    expect(headerSource).toMatch(/to="\/favorites"[\s\S]*?aria-label="Saved"/u);
+    expect(headerSource).not.toContain('navigate({ to: "/favorites" })');
   });
 
-  test("keeps mobile header controls to two explicit rows", async () => {
+  test("keeps the primary header compact, accessible, and taxonomy-free", async () => {
     const headerSource = await readSource("components/header.tsx");
-    const userMenuSource = await readSource("components/user-menu.tsx");
 
-    expect(headerSource).toContain("grid-cols-[minmax(0,1fr)_auto]");
-    expect(headerSource).toContain("col-span-2 row-start-2");
-    expect(headerSource).toContain("col-start-2 row-start-1");
-    expect(headerSource).toContain('aria-label="Favorites"');
-    expect(userMenuSource).toContain('aria-label="Log in"');
-    expect(userMenuSource).toContain("size-12");
+    expect(headerSource).toContain('<nav aria-label="Primary"');
+    expect(headerSource).toContain(">\n            Art\n");
+    expect(headerSource).toContain("<span>Explore</span>");
+    expect(headerSource).toContain("<span>For you</span>");
+    expect(headerSource).toContain('aria-label="Saved"');
+    expect(headerSource).toContain("<SubmissionDialog />");
+    expect(headerSource).toContain('aria-current={isExplore ? "page" : undefined}');
+    expect(headerSource).toContain('aria-current={isForYou ? "page" : undefined}');
+    expect(
+      headerSource.match(
+        /activeOptions=\{\{ exact: true, includeSearch: true, explicitUndefined: true \}\}/gu,
+      ),
+    ).toHaveLength(3);
+    expect(headerSource).toMatch(/>\s*Art\s*<\/Link>\s*<nav aria-label="Primary"/u);
+    expect(headerSource).toContain("active:scale-[0.96]");
+    expect(headerSource).not.toMatch(/Galleries|Styles|selectedSort|<select/u);
+  });
+
+  test("uses the feed marker only for tab identity, not artwork query inputs", async () => {
+    const homeRouteSource = await readSource("routes/index.tsx");
+
+    expect(homeRouteSource).toContain("loaderDeps:");
+    expect(homeRouteSource).not.toContain("deps.feed");
+    expect(homeRouteSource).not.toMatch(/input:[\s\S]*?feed:/u);
+    expect(homeRouteSource.match(/sort: (?:deps|search)\.sort \?\? "recent"/gu)).toHaveLength(2);
   });
 });

@@ -4,32 +4,16 @@ import { createFileRoute } from "@tanstack/react-router";
 import { ArtGallery } from "@/components/art-gallery";
 import { GalleryPageSkeleton } from "@/components/gallery-skeleton";
 import { RouteUnavailable } from "@/components/route-unavailable";
+import { parseHomeSearch } from "@/lib/home-search";
 import { orpc } from "@/utils/orpc";
 
-const SORT_OPTIONS = ["recent", "title", "artist"] as const;
-type SortOrder = (typeof SORT_OPTIONS)[number];
-
-interface GallerySearch {
-  category?: string;
-  style?: string;
-  sort?: SortOrder;
-}
-
-function parseGallerySearch(search: Record<string, unknown>): GallerySearch {
-  const category =
-    typeof search.category === "string" && search.category ? search.category : undefined;
-  const style =
-    !category && typeof search.style === "string" && search.style ? search.style : undefined;
-  const sort = SORT_OPTIONS.includes(search.sort as SortOrder)
-    ? (search.sort as SortOrder)
-    : undefined;
-
-  return { category, style, sort };
-}
-
 export const Route = createFileRoute("/")({
-  validateSearch: parseGallerySearch,
-  loaderDeps: ({ search }) => search,
+  validateSearch: parseHomeSearch,
+  loaderDeps: ({ search }) => ({
+    category: search.category,
+    style: search.style,
+    sort: search.sort,
+  }),
   loader: ({ context, deps }) =>
     context.queryClient.ensureInfiniteQueryData(
       context.orpc.artworks.list.infiniteOptions({

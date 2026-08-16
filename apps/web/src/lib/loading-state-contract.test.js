@@ -94,7 +94,6 @@ describe("loading-state design contract", () => {
         "components/favorite-button.tsx",
         "components/sign-in-form.tsx",
         "components/sign-up-form.tsx",
-        "components/user-menu.tsx",
       ].map(readWebSource),
     );
 

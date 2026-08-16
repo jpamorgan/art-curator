@@ -43,7 +43,9 @@ export default function SubmissionDialog() {
         );
         return;
       }
-      const body = (await response.json().catch(() => ({}))) as { alreadySaved?: boolean };
+      const body = (await response.json().catch(() => ({}))) as {
+        alreadySaved?: boolean;
+      };
       dialog?.close();
       toast.success(body.alreadySaved ? "Already in the inbox." : "Saved to the inbox.");
     } catch (caught) {
@@ -66,13 +68,13 @@ export default function SubmissionDialog() {
         variant="secondary"
         aria-label="Submit art"
         aria-haspopup="dialog"
-        className="size-12 rounded-full border-0 bg-neutral-100 text-neutral-700 hover:bg-neutral-200 hover:text-neutral-950 sm:size-10"
+        className="size-10 rounded-full border-0 bg-neutral-100 text-neutral-700 transition-[background-color,color,scale] duration-150 ease-out hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none"
         onClick={(event) => {
           setError(null);
           (event.currentTarget.nextElementSibling as HTMLDialogElement | null)?.showModal();
         }}
       >
-        <Plus aria-hidden="true" className="size-5 sm:size-4" />
+        <Plus aria-hidden="true" className="size-4" />
       </Button>
 
       <dialog

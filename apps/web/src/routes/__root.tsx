@@ -18,8 +18,6 @@ export const Route = createRootRouteWithContext<RouterAppContext>()({
   beforeLoad: async () => ({
     session: await getUser().catch(() => null),
   }),
-  loader: ({ context }) =>
-    context.queryClient.prefetchQuery(context.orpc.artworks.categories.queryOptions()),
   head: () => ({
     meta: [
       { charSet: "utf-8" },
@@ -63,6 +61,14 @@ function RootApp() {
       <main id="main-content">
         <Outlet />
       </main>
+      <footer className="flex justify-center px-3 pb-3">
+        <a
+          href="https://unavatar.io"
+          className="inline-flex min-h-10 items-center rounded-full px-2 text-xs text-neutral-600 transition-[color] duration-150 ease-out hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950"
+        >
+          Avatars provided by Unavatar
+        </a>
+      </footer>
     </div>
   );
 }
