@@ -198,7 +198,7 @@ function ArtworkDetailPage() {
                 href={artwork.source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-10 items-center gap-2 self-start rounded-full bg-neutral-100 py-2 pr-3 pl-2 text-base font-medium text-neutral-950 outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+                className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
               >
                 <ArrowUpRight className="size-4 shrink-0 stroke-neutral-950" aria-hidden="true" />
                 {artwork.source.name}
@@ -215,7 +215,7 @@ function ArtworkDetailPage() {
                 href={artwork.imageSource.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-10 items-center gap-2 self-start rounded-full bg-neutral-100 py-2 pr-3 pl-2 text-base font-medium text-neutral-950 outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+                className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
               >
                 <ArrowUpRight className="size-4 shrink-0 stroke-neutral-950" aria-hidden="true" />
                 Image source
@@ -271,7 +271,7 @@ function ArtworkDetailSkeleton() {
       <div className="flex flex-col gap-8 p-5 sm:p-8">
         <div className="flex justify-between">
           <Skeleton className="size-12 rounded-full bg-neutral-100 sm:pointer-fine:size-10" />
-          <Skeleton className="h-12 w-28 rounded-full bg-neutral-100 sm:pointer-fine:h-10" />
+          <Skeleton className="h-12 w-28 rounded-lg bg-neutral-100 sm:pointer-fine:h-10" />
         </div>
         <Skeleton className="h-8 w-24 rounded-full bg-neutral-100" />
         <div className="flex flex-col gap-3">
@@ -299,11 +299,11 @@ function ArtworkDetailSkeleton() {
           </div>
         </div>
         <div className="flex flex-col gap-3">
-          <Skeleton className="h-10 w-36 rounded-full bg-neutral-100" />
+          <Skeleton className="h-10 w-36 rounded-lg bg-neutral-100" />
           <Skeleton className="h-4 w-4/5 rounded-full bg-neutral-100" />
         </div>
         <div className="flex flex-col gap-3">
-          <Skeleton className="h-10 w-32 rounded-full bg-neutral-100" />
+          <Skeleton className="h-10 w-32 rounded-lg bg-neutral-100" />
           <Skeleton className="h-4 w-3/4 rounded-full bg-neutral-100" />
         </div>
       </div>
@@ -321,7 +321,7 @@ function ArtworkDetailError() {
         </p>
         <Link
           to="/"
-          className="inline-flex min-h-10 items-center rounded-full bg-neutral-950 px-3 text-base font-medium text-white outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+          className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
         >
           Browse art
         </Link>
@@ -337,7 +337,7 @@ function ArtworkDetailNotFound() {
         <h1 className="text-balance text-2xl font-medium tracking-tight">Artwork not found</h1>
         <Link
           to="/"
-          className="inline-flex min-h-10 items-center rounded-full bg-neutral-950 px-3 text-base font-medium text-white outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:min-h-8 sm:text-sm"
+          className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
         >
           Browse art
         </Link>

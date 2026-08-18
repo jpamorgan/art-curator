@@ -121,7 +121,7 @@ export function BrowseIndex({
           <button
             type="button"
             aria-busy={isRetrying}
-            className="min-h-10 min-w-24 rounded-full bg-neutral-950 px-3 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-70 sm:text-sm"
+            className="min-h-10 min-w-24 rounded-lg bg-neutral-950 px-3.5 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-70 sm:text-sm"
             disabled={isRetrying}
             onClick={onRetry}
           >

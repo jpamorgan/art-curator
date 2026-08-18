@@ -153,7 +153,7 @@ export default function SignInForm({ onPendingChange, returnTo }: SignInFormProp
             <button
               type="submit"
               aria-busy={isAuthenticating || isSubmitting}
-              className="h-12 rounded-full bg-neutral-950 px-3 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:opacity-70 sm:h-10 sm:text-sm"
+              className="h-12 rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:opacity-70 sm:h-10 sm:text-sm"
               disabled={!canSubmit || isAuthenticating || isSubmitting}
             >
               <PendingButtonLabel

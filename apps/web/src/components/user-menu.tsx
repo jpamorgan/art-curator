@@ -247,7 +247,7 @@ export function AuthenticatedUserMenu({
             <span className="block truncate font-medium text-neutral-950">{accountLabel}</span>
             <span className="block truncate">{session.user.email}</span>
           </DropdownMenuLabel>
-          <DropdownMenuSeparator className="bg-black/10" />
+          <DropdownMenuSeparator className="my-1 bg-black/10" />
           <DropdownMenuItem
             aria-busy={isSigningOut}
             disabled={isSigningOut}

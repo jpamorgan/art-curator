@@ -158,9 +158,9 @@ export default function FavoriteButton({
       aria-busy={isUpdating}
       disabled={isFavoriteTruthPending || isUpdating}
       className={cn(
-        "relative inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 rounded-full bg-white/95 text-neutral-950 shadow-sm ring-1 ring-black/10 backdrop-blur-sm transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:pointer-fine:h-10 sm:pointer-fine:min-w-10",
-        !showLabel && "w-12 sm:pointer-fine:w-10",
-        showLabel && "w-auto px-3 text-base font-medium sm:text-sm",
+        "relative inline-flex h-12 min-w-12 shrink-0 items-center justify-center gap-2 bg-white/95 text-neutral-950 shadow-sm ring-1 ring-black/10 backdrop-blur-sm transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait sm:pointer-fine:h-10 sm:pointer-fine:min-w-10",
+        !showLabel && "w-12 rounded-full sm:pointer-fine:w-10",
+        showLabel && "w-auto rounded-lg px-3.5 text-base font-medium sm:text-sm",
         className,
       )}
       onClick={(event) => {

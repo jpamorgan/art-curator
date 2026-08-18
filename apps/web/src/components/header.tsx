@@ -23,22 +23,22 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
   const isExplore = isHome && !isForYou;
 
   const tabClassName =
-    "flex h-10 shrink-0 items-center gap-1 rounded-full px-1 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,scale] duration-150 ease-out hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:gap-1.5 sm:px-3 sm:text-sm";
+    "relative flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,scale] duration-150 ease-out after:absolute after:inset-x-0 after:top-1/2 after:h-10 after:-translate-y-1/2 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:gap-1.5 sm:px-3.5 sm:text-sm";
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 shadow-[0_1px_0_rgba(0,0,0,0.08)] backdrop-blur-md">
       <div className="flex h-14 items-center justify-between gap-0.5 px-1 sm:gap-3 sm:px-3">
-        <div className="flex min-w-0 items-center">
+        <div className="flex min-w-0 items-center gap-0.5 sm:gap-1.5">
           <Link
             to="/"
             search={{ category: undefined, style: undefined, sort: undefined, feed: undefined }}
             activeOptions={{ exact: true, includeSearch: true, explicitUndefined: true }}
             aria-label="Art home"
-            className="flex size-10 shrink-0 items-center justify-center rounded-full text-xl font-semibold tracking-[-0.04em] text-neutral-950 transition-[background-color,color,scale] duration-150 ease-out hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none"
+            className="relative flex h-9 w-10 shrink-0 items-center justify-center rounded-lg text-xl font-semibold tracking-[-0.04em] text-neutral-950 transition-[background-color,color,scale] duration-150 ease-out after:absolute after:inset-x-0 after:top-1/2 after:h-10 after:-translate-y-1/2 hover:bg-neutral-100 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:w-auto sm:px-2.5"
           >
             Art
           </Link>
-          <nav aria-label="Primary" className="flex min-w-0 items-center">
+          <nav aria-label="Primary" className="flex min-w-0 items-center gap-1 sm:gap-1.5">
             <Link
               to="/"
               search={{ category: undefined, style: undefined, sort: undefined, feed: undefined }}
@@ -46,7 +46,10 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
               aria-current={isExplore ? "page" : undefined}
               className={`${tabClassName} ${isExplore ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-600"}`}
             >
-              <Compass aria-hidden="true" className="size-4 shrink-0 stroke-[1.75]" />
+              <Compass
+                aria-hidden="true"
+                className="hidden size-4 shrink-0 stroke-[1.75] min-[360px]:block"
+              />
               <span>Explore</span>
             </Link>
             <Link
@@ -56,7 +59,10 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
               aria-current={isForYou ? "page" : undefined}
               className={`${tabClassName} ${isForYou ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-600"}`}
             >
-              <Sparkles aria-hidden="true" className="size-4 shrink-0 stroke-[1.75]" />
+              <Sparkles
+                aria-hidden="true"
+                className="hidden size-4 shrink-0 stroke-[1.75] min-[360px]:block"
+              />
               <span>For you</span>
             </Link>
           </nav>

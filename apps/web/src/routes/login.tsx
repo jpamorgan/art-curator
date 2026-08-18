@@ -33,7 +33,7 @@ function RouteComponent() {
             {mode === "sign-in" ? "Log in" : "Create an account"}
           </h1>
           <div
-            className="grid grid-cols-2 rounded-full bg-neutral-100 p-1"
+            className="grid grid-cols-2 rounded-xl bg-neutral-100 p-1"
             role="group"
             aria-label="Account access"
             aria-busy={isAuthenticating}
@@ -43,7 +43,7 @@ function RouteComponent() {
               aria-pressed={mode === "sign-in"}
               disabled={isAuthenticating}
               onClick={() => setMode("sign-in")}
-              className="min-h-10 rounded-full px-3 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
+              className="min-h-10 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
             >
               Log in
             </button>
@@ -52,7 +52,7 @@ function RouteComponent() {
               aria-pressed={mode === "sign-up"}
               disabled={isAuthenticating}
               onClick={() => setMode("sign-up")}
-              className="min-h-10 rounded-full px-3 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
+              className="min-h-10 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
             >
               Sign up
             </button>

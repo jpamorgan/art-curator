@@ -39,7 +39,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
       <body>
         <a
           href="#main-content"
-          className="fixed top-2 left-2 z-50 -translate-y-20 rounded-full bg-neutral-950 px-3 py-2 text-white focus:translate-y-0"
+          className="fixed top-2 left-2 z-50 -translate-y-20 rounded-lg bg-neutral-950 px-3.5 py-2 text-white focus:translate-y-0"
         >
           Skip to content
         </a>
@@ -64,7 +64,7 @@ function RootApp() {
       <footer className="flex justify-center px-3 pb-3">
         <a
           href="https://unavatar.io"
-          className="inline-flex min-h-10 items-center rounded-full px-2 text-xs text-neutral-600 transition-[color] duration-150 ease-out hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950"
+          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-xs text-neutral-600 transition-[color] duration-150 ease-out hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950"
         >
           Avatars provided by Unavatar
         </a>

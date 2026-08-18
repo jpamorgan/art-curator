@@ -110,14 +110,14 @@ export function FilteredGalleryRouteState({ kind, status }: FilteredGalleryRoute
         {kind === "gallery" ? (
           <Link
             to="/galleries"
-            className="inline-flex min-h-10 items-center rounded-full bg-neutral-950 px-3 text-base font-medium text-white outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+            className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
           >
             {browseLabel}
           </Link>
         ) : (
           <Link
             to="/styles"
-            className="inline-flex min-h-10 items-center rounded-full bg-neutral-950 px-3 text-base font-medium text-white outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+            className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
           >
             {browseLabel}
           </Link>
