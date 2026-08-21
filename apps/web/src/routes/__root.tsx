@@ -1,6 +1,12 @@
 import { Toaster } from "@art/ui/components/sonner";
 import type { QueryClient } from "@tanstack/react-query";
-import { HeadContent, Outlet, Scripts, createRootRouteWithContext } from "@tanstack/react-router";
+import {
+  HeadContent,
+  Link,
+  Outlet,
+  Scripts,
+  createRootRouteWithContext,
+} from "@tanstack/react-router";
 
 import Header from "@/components/header";
 import PrivateSessionBoundary from "@/components/private-session-boundary";
@@ -61,10 +67,28 @@ function RootApp() {
       <main id="main-content">
         <Outlet />
       </main>
-      <footer className="flex justify-center px-3 pb-3">
+      <footer className="flex flex-wrap items-center justify-center gap-1 px-3 pb-3">
+        <Link
+          to="/artists"
+          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+        >
+          Artists
+        </Link>
+        <Link
+          to="/galleries"
+          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+        >
+          Galleries
+        </Link>
+        <Link
+          to="/styles"
+          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+        >
+          Styles
+        </Link>
         <a
           href="https://unavatar.io"
-          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-xs text-neutral-600 transition-[color] duration-150 ease-out hover:text-neutral-700 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950"
+          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm"
         >
           Avatars provided by Unavatar
         </a>

@@ -5,6 +5,7 @@ import {
   clearFavoriteFlags,
   clearPrivateArtQueryState,
   isFavoritesPath,
+  isPrivateArtPath,
   queryKeyBelongsToUser,
   scopePrivateQueryKey,
   shouldClearPrivateArtData,
@@ -116,5 +117,11 @@ describe("private art session boundaries", () => {
     expect(isFavoritesPath("/favorites")).toBe(true);
     expect(isFavoritesPath("/favorites/")).toBe(true);
     expect(isFavoritesPath("/favorites/shared")).toBe(false);
+  });
+
+  test("recognizes every protected art feed", () => {
+    expect(isPrivateArtPath("/favorites")).toBe(true);
+    expect(isPrivateArtPath("/following/")).toBe(true);
+    expect(isPrivateArtPath("/")).toBe(false);
   });
 });

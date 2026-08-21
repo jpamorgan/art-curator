@@ -1,12 +1,18 @@
 import {
+  artist,
   artwork,
+  artworkArtist,
   artworkCategory,
   artworkStyle,
   category,
   favorite,
+  followedArtist,
+  followedGallery,
+  followedStyle,
   gallery,
   source,
   style,
+  tasteProfile,
 } from "@art/db/schema/art";
 import { artworkArtifactUrl } from "@art/db/artifacts";
 import {
@@ -33,6 +39,7 @@ import {
   artworkDetailSchema,
   artworkListInputSchema,
   artworkPageSchema,
+  artistSummarySchema,
   browseSlugInputSchema,
   favoriteToggleInputSchema,
   favoritesListInputSchema,
@@ -47,11 +54,12 @@ import { protectedProcedure, publicProcedure } from "../index";
 
 type Database = Context["db"];
 
-type ArtworkRow = {
+export type ArtworkRow = {
   id: string;
   slug: string;
   title: string;
   artist: string;
+  artistSlug: string;
   date: string;
   imageFingerprint: string;
   thumbnailFingerprint: string;
@@ -63,11 +71,19 @@ type ArtworkRow = {
   curatedAt: Date;
 };
 
-const artworkSelection = {
+export const artworkSelection = {
   id: artwork.id,
   slug: artwork.slug,
   title: artwork.title,
   artist: artwork.artist,
+  artistSlug: sql<string>`(
+    select ${artist.slug}
+    from ${artworkArtist}
+    inner join ${artist} on ${artist.id} = ${artworkArtist.artistId}
+    where ${artworkArtist.artworkId} = ${artwork.id}
+    order by ${artworkArtist.position}, ${artist.id}
+    limit 1
+  )`,
   date: artwork.dateDisplay,
   imageFingerprint: artwork.imageFingerprint,
   thumbnailFingerprint: artwork.thumbnailFingerprint,
@@ -134,7 +150,7 @@ function decodeFavoriteCursor(cursor: string): FavoriteCursor {
   return parsed.data;
 }
 
-async function hydrateCards(
+export async function hydrateCards(
   db: Database,
   rows: ArtworkRow[],
   userId?: string,
@@ -232,6 +248,18 @@ function filterConditions(db: Database, input: ArtworkListInput): SQL[] {
           .from(artworkStyle)
           .innerJoin(style, eq(artworkStyle.styleId, style.id))
           .where(and(eq(artworkStyle.artworkId, artwork.id), eq(style.slug, input.style))),
+      ),
+    );
+  }
+
+  if (input.artist) {
+    conditions.push(
+      exists(
+        db
+          .select({ value: artworkArtist.artworkId })
+          .from(artworkArtist)
+          .innerJoin(artist, eq(artworkArtist.artistId, artist.id))
+          .where(and(eq(artworkArtist.artworkId, artwork.id), eq(artist.slug, input.artist))),
       ),
     );
   }
@@ -462,6 +490,16 @@ export const galleriesRouter = {
         .groupBy(gallery.id)
         .orderBy(asc(gallery.name));
 
+      const followed = context.session?.user.id
+        ? new Set(
+            (
+              await context.db
+                .select({ id: followedGallery.galleryId })
+                .from(followedGallery)
+                .where(eq(followedGallery.userId, context.session.user.id))
+            ).map((item) => item.id),
+          )
+        : new Set<string>();
       return {
         items: rows.map(({ coverArtworkId, coverFingerprint, ...row }) => ({
           ...row,
@@ -474,6 +512,7 @@ export const galleriesRouter = {
                   coverFingerprint,
                 )
               : null,
+          isFollowing: followed.has(row.id),
         })),
       };
     }),
@@ -541,8 +580,136 @@ export const galleriesRouter = {
             url: row.sourceUrl,
             attribution: row.sourceAttribution,
           },
+          isFollowing: context.session?.user.id
+            ? Boolean(
+                (
+                  await context.db
+                    .select({ id: followedGallery.galleryId })
+                    .from(followedGallery)
+                    .where(
+                      and(
+                        eq(followedGallery.userId, context.session.user.id),
+                        eq(followedGallery.galleryId, row.id),
+                      ),
+                    )
+                    .limit(1)
+                )[0],
+              )
+            : false,
         },
       };
+    }),
+};
+
+const artistCount = count(artworkArtist.artworkId);
+const artistCoverArtworkId = sql<string | null>`(
+  select ${artwork.id}
+  from ${artwork}
+  inner join ${artworkArtist} on ${artworkArtist.artworkId} = ${artwork.id}
+  where ${artworkArtist.artistId} = ${artist.id}
+  order by ${artwork.curatedAt} desc, ${artwork.id} desc
+  limit 1
+)`;
+const artistCoverFingerprint = sql<string | null>`(
+  select ${artwork.thumbnailFingerprint}
+  from ${artwork}
+  inner join ${artworkArtist} on ${artworkArtist.artworkId} = ${artwork.id}
+  where ${artworkArtist.artistId} = ${artist.id}
+  order by ${artwork.curatedAt} desc, ${artwork.id} desc
+  limit 1
+)`;
+
+function artistSummary(
+  row: {
+    id: string;
+    slug: string;
+    name: string;
+    description: string;
+    artworkCount: number;
+    coverArtworkId: string | null;
+    coverFingerprint: string | null;
+  },
+  isFollowing = false,
+) {
+  const { coverArtworkId, coverFingerprint, ...summary } = row;
+  return {
+    ...summary,
+    coverImageUrl:
+      coverArtworkId && coverFingerprint
+        ? artworkArtifactUrl(env.BETTER_AUTH_URL, coverArtworkId, "thumbnail", coverFingerprint)
+        : null,
+    isFollowing,
+  };
+}
+
+export const artistsRouter = {
+  list: publicProcedure
+    .output(z.object({ items: z.array(artistSummarySchema) }))
+    .handler(async ({ context }) => {
+      const rows = await context.db
+        .select({
+          id: artist.id,
+          slug: artist.slug,
+          name: artist.name,
+          description: artist.description,
+          artworkCount: artistCount,
+          coverArtworkId: artistCoverArtworkId,
+          coverFingerprint: artistCoverFingerprint,
+        })
+        .from(artist)
+        .leftJoin(artworkArtist, eq(artist.id, artworkArtist.artistId))
+        .groupBy(artist.id)
+        .orderBy(asc(artist.name));
+      const followed = context.session?.user.id
+        ? new Set(
+            (
+              await context.db
+                .select({ id: followedArtist.artistId })
+                .from(followedArtist)
+                .where(eq(followedArtist.userId, context.session.user.id))
+            ).map((item) => item.id),
+          )
+        : new Set<string>();
+      return { items: rows.map((row) => artistSummary(row, followed.has(row.id))) };
+    }),
+
+  bySlug: publicProcedure
+    .input(browseSlugInputSchema)
+    .output(z.object({ artist: artistSummarySchema }))
+    .handler(async ({ context, input }) => {
+      const [row] = await context.db
+        .select({
+          id: artist.id,
+          slug: artist.slug,
+          name: artist.name,
+          description: artist.description,
+          artworkCount: artistCount,
+          coverArtworkId: artistCoverArtworkId,
+          coverFingerprint: artistCoverFingerprint,
+        })
+        .from(artist)
+        .leftJoin(artworkArtist, eq(artist.id, artworkArtist.artistId))
+        .where(eq(artist.slug, input.slug))
+        .groupBy(artist.id)
+        .limit(1);
+      if (!row) throw new ORPCError("NOT_FOUND", { message: "Artist not found." });
+      const isFollowing = context.session?.user.id
+        ? Boolean(
+            (
+              await context.db
+                .select({ id: followedArtist.artistId })
+                .from(followedArtist)
+                .where(
+                  and(
+                    eq(followedArtist.userId, context.session.user.id),
+                    eq(followedArtist.artistId, row.id),
+                  ),
+                )
+                .limit(1)
+            )[0],
+          )
+        : false;
+      return { artist: artistSummary(row, isFollowing) };
     }),
 };
 
@@ -583,6 +750,16 @@ export const stylesRouter = {
         .groupBy(style.id)
         .orderBy(asc(style.sortOrder), asc(style.name));
 
+      const followed = context.session?.user.id
+        ? new Set(
+            (
+              await context.db
+                .select({ id: followedStyle.styleId })
+                .from(followedStyle)
+                .where(eq(followedStyle.userId, context.session.user.id))
+            ).map((item) => item.id),
+          )
+        : new Set<string>();
       return {
         items: rows.map(({ coverArtworkId, coverFingerprint, ...row }) => ({
           ...row,
@@ -595,6 +772,7 @@ export const stylesRouter = {
                   coverFingerprint,
                 )
               : null,
+          isFollowing: followed.has(row.id),
         })),
       };
     }),
@@ -636,6 +814,22 @@ export const stylesRouter = {
                   coverFingerprint,
                 )
               : null,
+          isFollowing: context.session?.user.id
+            ? Boolean(
+                (
+                  await context.db
+                    .select({ id: followedStyle.styleId })
+                    .from(followedStyle)
+                    .where(
+                      and(
+                        eq(followedStyle.userId, context.session.user.id),
+                        eq(followedStyle.styleId, row.id),
+                      ),
+                    )
+                    .limit(1)
+                )[0],
+              )
+            : false,
         },
       };
     }),
@@ -726,16 +920,42 @@ export const favoritesRouter = {
         .limit(1);
 
       if (existing) {
-        await context.db
+        const removeFavorite = context.db
           .delete(favorite)
           .where(and(eq(favorite.userId, userId), eq(favorite.artworkId, input.artworkId)));
+        const updateProfile = context.db
+          .insert(tasteProfile)
+          .values({ userId, revision: 1, artworkCount: 0 })
+          .onConflictDoUpdate({
+            target: tasteProfile.userId,
+            set: {
+              revision: sql`${tasteProfile.revision} + 1`,
+              embedding: null,
+              artworkCount: sql`(select count(*) from ${favorite} where ${favorite.userId} = ${userId})`,
+              updatedAt: new Date(),
+            },
+          });
+        await context.db.batch([removeFavorite, updateProfile]);
         return { artworkId: input.artworkId, isFavorite: false };
       }
 
-      await context.db
+      const addFavorite = context.db
         .insert(favorite)
         .values({ userId, artworkId: input.artworkId })
         .onConflictDoNothing();
+      const updateProfile = context.db
+        .insert(tasteProfile)
+        .values({ userId, revision: 1, artworkCount: 1 })
+        .onConflictDoUpdate({
+          target: tasteProfile.userId,
+          set: {
+            revision: sql`${tasteProfile.revision} + 1`,
+            embedding: null,
+            artworkCount: sql`(select count(*) from ${favorite} where ${favorite.userId} = ${userId})`,
+            updatedAt: new Date(),
+          },
+        });
+      await context.db.batch([addFavorite, updateProfile]);
 
       return { artworkId: input.artworkId, isFavorite: true };
     }),

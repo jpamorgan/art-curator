@@ -1,0 +1,315 @@
+import { describe, expect, test } from "bun:test";
+
+import {
+  ENRICHMENT_EMBEDDING_DIMENSIONS,
+  canonicalArtworkText,
+  enqueueArtworkEnrichment,
+  enrichArtwork,
+  handleEnrichmentBackfillRequest,
+  handleEnrichmentQueue,
+} from "./enrichment";
+
+const SECRET = "enrichment_test_secret_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+const embedding = Array.from({ length: ENRICHMENT_EMBEDDING_DIMENSIONS }, (_, index) =>
+  index === 0 ? 1 : 0,
+);
+
+const facets = {
+  palette: ["ultramarine", "ochre"],
+  temperature: "mixed",
+  brightness: "mid-tone",
+  subjects: ["figure"],
+  setting: ["interior"],
+  mood: ["contemplative"],
+  composition: ["central subject"],
+  textureAndMarkMaking: ["visible brushwork"],
+  abstraction: "representational",
+  visualDensity: "moderate",
+  motifs: ["chair"],
+  visualDescription: "A seated figure is framed by broad blue and ochre marks.",
+};
+
+function artwork(overrides = {}) {
+  return {
+    id: "work-1",
+    title: "Blue Room",
+    artist: "Avery Hart",
+    artistId: "avery-hart",
+    dateDisplay: "2024",
+    description: "A quiet study of a room.",
+    medium: "Oil on canvas",
+    alt: "A seated figure in a blue room.",
+    galleryId: "gallery-1",
+    galleryName: "Example Gallery",
+    isPublicDomain: 0,
+    thumbnailFingerprint: "thumb-fingerprint",
+    thumbnailR2Key: "artworks/work-1/thumbnail.jpg",
+    categorySlugs: '["painting"]',
+    styleSlugs: '["modern","figurative"]',
+    ...overrides,
+  };
+}
+
+function database(row, initialState = null) {
+  const state = { value: initialState, writes: [] };
+  return {
+    state,
+    value: {
+      prepare(sql) {
+        return {
+          bind(...values) {
+            return {
+              async first() {
+                if (sql.includes("FROM artwork a JOIN gallery")) return row;
+                if (sql.includes("SELECT status, content_fingerprint")) return state.value;
+                throw new Error(`Unexpected first SQL: ${sql}`);
+              },
+              async run() {
+                state.writes.push({ sql, values });
+                if (sql.includes("INSERT INTO artwork_enrichment"))
+                  state.value = { status: "processing", fingerprint: "" };
+                if (sql.includes("status='ready'"))
+                  state.value = { status: "ready", fingerprint: values[4] };
+                if (sql.includes("status='failed'")) state.value.status = "failed";
+                return { success: true };
+              },
+            };
+          },
+        };
+      },
+    },
+  };
+}
+
+function jsonResponse(payload, status = 200) {
+  return new Response(JSON.stringify(payload), {
+    status,
+    headers: { "Content-Type": "application/json" },
+  });
+}
+
+describe("artwork enrichment", () => {
+  test("builds stable canonical text and sorts taxonomy", () => {
+    const text = canonicalArtworkText(artwork({ styleSlugs: '["modern","figurative"]' }), facets);
+    expect(text).toContain("Styles: figurative, modern");
+    expect(text).toContain("Visual description: A seated figure");
+    expect(text).toContain("Texture and mark-making: visible brushwork");
+  });
+
+  test("uses metadata only when image-analysis permission is absent", async () => {
+    const db = database(artwork({ isPublicDomain: 0 }));
+    const requests = [];
+    const vectors = [];
+    const result = await enrichArtwork("work-1", {
+      database: db.value,
+      bucket: {
+        get: async () => {
+          throw new Error("must not read image");
+        },
+      },
+      openAiApiKey: "test-key",
+      fetcher: async (url, init) => {
+        requests.push({ url, body: JSON.parse(init.body) });
+        expect(init.signal).toBeInstanceOf(AbortSignal);
+        return jsonResponse({ data: [{ embedding }] });
+      },
+      vectorIndex: {
+        async upsert(value) {
+          vectors.push(...value);
+          return { ids: ["work-1"], count: 1 };
+        },
+      },
+      now: () => 100,
+    });
+    expect(result).toMatchObject({ outcome: "ready", sourceMode: "metadata" });
+    expect(requests).toHaveLength(1);
+    expect(requests[0].url).toEndWith("/embeddings");
+    expect(requests[0].body).toMatchObject({
+      model: "text-embedding-3-small",
+      dimensions: 512,
+    });
+    expect(vectors[0].metadata).toEqual({
+      artistId: "avery-hart",
+      galleryId: "gallery-1",
+      isPublicDomain: false,
+      categorySlugs: ["painting"],
+      styleSlugs: ["figurative", "modern"],
+    });
+    expect(db.state.value.status).toBe("ready");
+    const ready = db.state.writes.find(({ sql }) => sql.includes("status='ready'"));
+    expect(ready.values[6]).toBe("{}");
+  });
+
+  test("analyzes a permitted thumbnail once, then embeds structured canonical text", async () => {
+    const db = database(artwork({ isPublicDomain: 1 }));
+    const requests = [];
+    const result = await enrichArtwork("work-1", {
+      database: db.value,
+      bucket: {
+        async get() {
+          return { arrayBuffer: async () => new Uint8Array([0xff, 0xd8, 0xff, 0xd9]).buffer };
+        },
+      },
+      openAiApiKey: "test-key",
+      fetcher: async (url, init) => {
+        const body = JSON.parse(init.body);
+        requests.push({ url, body });
+        return url.endsWith("/responses")
+          ? jsonResponse({ output_text: JSON.stringify(facets) })
+          : jsonResponse({ data: [{ embedding }] });
+      },
+      vectorIndex: { upsert: async () => ({ mutationId: "mutation-1" }) },
+      now: () => 200,
+    });
+    expect(result.sourceMode).toBe("image");
+    expect(requests.map(({ url }) => url.split("/").at(-1))).toEqual(["responses", "embeddings"]);
+    expect(requests[0].body.store).toBe(false);
+    expect(requests[0].body.text.format).toMatchObject({ type: "json_schema", strict: true });
+    expect(requests[1].body.input).toContain(facets.visualDescription);
+    const ready = db.state.writes.find(({ sql }) => sql.includes("status='ready'"));
+    expect(JSON.parse(ready.values[6])).toEqual(facets);
+    expect(ready.values[7]).toBe("mutation-1");
+  });
+
+  test("skips OpenAI and Vectorize when the completed input fingerprint is unchanged", async () => {
+    const row = artwork({ isPublicDomain: 0 });
+    const firstDb = database(row);
+    let calls = 0;
+    const dependencies = {
+      database: firstDb.value,
+      bucket: { get: async () => null },
+      openAiApiKey: "test-key",
+      fetcher: async () => {
+        calls += 1;
+        return jsonResponse({ data: [{ embedding }] });
+      },
+      vectorIndex: { upsert: async () => ({ ids: ["work-1"], count: 1 }) },
+      now: () => 300,
+    };
+    const first = await enrichArtwork("work-1", dependencies);
+    expect(first.outcome).toBe("ready");
+    const secondDb = database(row, {
+      status: "ready",
+      fingerprint: first.fingerprint,
+      canonicalText: "already embedded",
+      visualFacets: "{}",
+      processedAt: 300,
+    });
+    const second = await enrichArtwork("work-1", {
+      ...dependencies,
+      database: secondDb.value,
+      vectorIndex: {
+        ...dependencies.vectorIndex,
+        getByIds: async () => [{ id: "work-1", values: embedding }],
+      },
+    });
+    expect(second.outcome).toBe("unchanged");
+    expect(calls).toBe(1);
+    expect(secondDb.state.writes).toHaveLength(1);
+    expect(secondDb.state.writes[0].sql).toContain("SET status='ready'");
+  });
+
+  test("records failures for observability and asks the queue to retry only that message", async () => {
+    const db = database(artwork({ isPublicDomain: 0 }));
+    let acknowledged = false;
+    let retryOptions;
+    await handleEnrichmentQueue(
+      {
+        messages: [
+          {
+            body: { artworkId: "work-1", reason: "backfill", requestedAt: 10 },
+            ack: () => (acknowledged = true),
+            retry: (options) => (retryOptions = options),
+          },
+        ],
+      },
+      {
+        database: db.value,
+        bucket: { get: async () => null },
+        openAiApiKey: "test-key",
+        fetcher: async () => jsonResponse({ error: "rate limited" }, 429),
+        vectorIndex: { upsert: async () => ({ ids: [], count: 0 }) },
+        now: () => 400,
+      },
+    );
+    expect(acknowledged).toBe(false);
+    expect(retryOptions).toEqual({ delaySeconds: 30 });
+    expect(db.state.value.status).toBe("failed");
+    const failed = db.state.writes.find(({ sql }) => sql.includes("status='failed'"));
+    expect(failed.values[0]).toBe("OpenAI embeddings failed with HTTP 429.");
+  });
+
+  test("rejects oversized OpenAI responses before buffering their body", async () => {
+    const db = database(artwork({ isPublicDomain: 0 }));
+    expect(
+      enrichArtwork("work-1", {
+        database: db.value,
+        bucket: { get: async () => null },
+        openAiApiKey: "test-key",
+        fetcher: async () =>
+          new Response("{}", { headers: { "Content-Length": String(2 * 1_024 * 1_024 + 1) } }),
+        vectorIndex: { upsert: async () => ({ ids: [], count: 0 }) },
+        now: () => 450,
+      }),
+    ).rejects.toThrow("response exceeded the size limit");
+  });
+
+  test("does not turn a persisted catalog write into a failure when enqueueing fails", async () => {
+    const queued = await enqueueArtworkEnrichment(
+      {
+        send: async () => {
+          throw new Error("queue unavailable");
+        },
+      },
+      "work-1",
+      "import",
+      500,
+    );
+    expect(queued).toBe(false);
+  });
+
+  test("backfills every catalog row so changed models and prompts can re-fingerprint ready work", async () => {
+    let query = "";
+    let sent = [];
+    const response = await handleEnrichmentBackfillRequest(
+      new Request("https://api.example.com/internal/enrichment/backfill?limit=2&cursor=work-0", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${SECRET}` },
+      }),
+      {
+        secret: SECRET,
+        now: () => 600,
+        database: {
+          prepare(sql) {
+            query = sql;
+            return {
+              bind() {
+                return {
+                  async run() {
+                    return { success: true };
+                  },
+                  async all() {
+                    return { results: [{ id: "work-1" }, { id: "work-2" }] };
+                  },
+                };
+              },
+            };
+          },
+        },
+        queue: {
+          async sendBatch(messages) {
+            sent = messages;
+          },
+        },
+      },
+    );
+    expect(response.status).toBe(200);
+    expect(query).not.toContain("status != 'ready'");
+    expect(sent.map(({ body }) => body)).toEqual([
+      { artworkId: "work-1", reason: "backfill", requestedAt: 600 },
+      { artworkId: "work-2", reason: "backfill", requestedAt: 600 },
+    ]);
+    expect(await response.json()).toEqual({ queued: 2, nextCursor: "work-2" });
+  });
+});

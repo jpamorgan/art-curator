@@ -14,6 +14,34 @@ export async function createContext({ context }: CreateContextOptions) {
   return {
     db,
     session,
+    recommendationIndex: (
+      context.env as {
+        ARTWORK_VECTORS?: {
+          query(
+            vector: number[],
+            options: {
+              topK: number;
+              filter?: Record<string, unknown>;
+              returnMetadata?: "all" | "indexed" | "none";
+            },
+          ): Promise<{
+            matches: {
+              id: string;
+              score: number;
+              metadata?: Record<string, unknown>;
+            }[];
+          }>;
+          getByIds(ids: string[]): Promise<{ id: string; values: number[] }[]>;
+        };
+      }
+    ).ARTWORK_VECTORS,
+    recommendationAnalytics: (
+      context.env as {
+        RECOMMENDATION_ANALYTICS?: {
+          writeDataPoint(event: { blobs?: string[]; doubles?: number[]; indexes?: string[] }): void;
+        };
+      }
+    ).RECOMMENDATION_ANALYTICS,
   };
 }
 

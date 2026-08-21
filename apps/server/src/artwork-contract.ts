@@ -12,6 +12,17 @@ export type ArtworkWriteDependencies = {
   sleep?: (milliseconds: number) => Promise<void>;
   /** Tests may shorten the production 12-second per-attempt deadline. */
   downloadAttemptTimeoutMs?: number;
+  enrichmentQueue?: Pick<
+    Queue<{
+      artworkId: string;
+      reason: "import" | "update" | "backfill";
+      requestedAt: number;
+    }>,
+    "send"
+  >;
+  embeddingModel?: string;
+  promptVersion?: string;
+  visionModel?: string;
 };
 
 export class ArtworkRequestError extends Error {

@@ -22,6 +22,8 @@ const migrationFiles = [
   "0005_tired_reavers.sql",
   "0006_nappy_marvex.sql",
   "0007_classy_ma_gnuci.sql",
+  "0008_add_works_on_paper_category.sql",
+  "0009_early_naoko.sql",
 ];
 let sqlite;
 
@@ -319,6 +321,52 @@ describe("single artwork writes", () => {
     });
     expect(bucket.puts).toBe(2);
     expect(sqlite.query("SELECT count(*) AS count FROM art_inbox").get().count).toBe(0);
+    expect(sqlite.query("SELECT version FROM catalog_state WHERE id = 1").get().version).toBe(2);
+    expect(
+      sqlite
+        .query(
+          `SELECT ar.name FROM artwork_artist aa JOIN artist ar ON ar.id=aa.artist_id
+           WHERE aa.artwork_id=? ORDER BY aa.position`,
+        )
+        .all(body.artwork.id),
+    ).toEqual([{ name: "Avery Hart" }]);
+  });
+
+  test("keeps the committed artwork when the enrichment queue is unavailable", async () => {
+    const bucket = r2();
+    const base = d1(sqlite);
+    let pendingStateRecorded = false;
+    const database = {
+      ...base,
+      prepare(sql) {
+        if (!sql.includes("artwork_enrichment")) return base.prepare(sql);
+        return {
+          bind() {
+            return {
+              async run() {
+                pendingStateRecorded = true;
+                return { success: true };
+              },
+            };
+          },
+        };
+      },
+    };
+    const writeDependencies = dependencies(bucket, imageFetcher(), database);
+    writeDependencies.enrichmentQueue = {
+      async send() {
+        throw new Error("queue unavailable");
+      },
+    };
+    const response = await handleArtworkWriteRequest(
+      writeRequest(distinctDraft("queue-failure")),
+      writeDependencies,
+    );
+    const body = await response.json();
+    expect(response.status).toBe(200);
+    expect(body.outcome).toBe("created");
+    expect(pendingStateRecorded).toBe(true);
+    expect(sqlite.query("SELECT id FROM artwork WHERE id = ?").get(body.artwork.id)).toBeTruthy();
   });
 
   test("separates precomputed identities that collide in their first 8 SHA-256 hex", async () => {
@@ -335,6 +383,32 @@ describe("single artwork writes", () => {
     const ids = [first.body.artwork.id, second.body.artwork.id];
     expect(ids).toEqual(["moma-55acb7b6ac2f3e1a", "moma-55acb7b6bf28b685"]);
     expect(ids[0].slice(0, -8)).toBe(ids[1].slice(0, -8));
+  });
+
+  test("keeps distinct artists whose names normalize to the same slug", async () => {
+    const first = await createArtwork(distinctDraft("artist-slug-a", { artist: "A+B" }));
+    const second = await createArtwork(distinctDraft("artist-slug-b", { artist: "A B" }));
+    expect([first.body.outcome, second.body.outcome]).toEqual(["created", "created"]);
+    const artists = sqlite
+      .query("SELECT id, slug, name FROM artist WHERE name IN ('A+B','A B') ORDER BY name")
+      .all();
+    expect(artists).toHaveLength(2);
+    expect(new Set(artists.map(({ id }) => id)).size).toBe(2);
+    expect(new Set(artists.map(({ slug }) => slug)).size).toBe(2);
+  });
+
+  test("bounds long artist identities while preserving deterministic collision safety", async () => {
+    const sharedPrefix = "An Artist With A Deliberately Long Catalog Name ".repeat(4);
+    const names = [`${sharedPrefix}Alpha`, `${sharedPrefix}Beta`];
+    const first = await createArtwork(distinctDraft("long-artist-a", { artist: names[0] }));
+    const second = await createArtwork(distinctDraft("long-artist-b", { artist: names[1] }));
+    expect([first.body.outcome, second.body.outcome]).toEqual(["created", "created"]);
+    const artists = sqlite
+      .query("SELECT id, slug, name FROM artist WHERE name IN (?, ?) ORDER BY name")
+      .all(...names);
+    expect(artists).toHaveLength(2);
+    expect(artists.every(({ id, slug }) => id.length <= 96 && slug.length <= 89)).toBe(true);
+    expect(new Set(artists.map(({ id }) => id)).size).toBe(2);
   });
 
   test("creates compact source and gallery definitions in the artwork batch and reuses exact matches", async () => {
@@ -707,6 +781,9 @@ describe("single artwork writes", () => {
     const original = sqlite
       .query("SELECT curated_at, updated_at, slug FROM artwork WHERE id = ?")
       .get(artworkId);
+    const originalCatalogVersion = sqlite
+      .query("SELECT version FROM catalog_state WHERE id = 1")
+      .get().version;
     const update = await handleArtworkWriteRequest(
       writeRequest(
         validDraft({
@@ -730,6 +807,17 @@ describe("single artwork writes", () => {
       updated_at: 1_900_000_000_000,
       slug: original.slug,
     });
+    expect(
+      sqlite
+        .query(
+          `SELECT ar.name FROM artwork_artist aa JOIN artist ar ON ar.id=aa.artist_id
+           WHERE aa.artwork_id=? ORDER BY aa.position`,
+        )
+        .all(artworkId),
+    ).toEqual([{ name: "Avery Hart" }]);
+    expect(sqlite.query("SELECT version FROM catalog_state WHERE id = 1").get().version).toBe(
+      originalCatalogVersion + 1,
+    );
   });
 
   test("allows a shared sourceUrl but rejects authoritative update collisions before image work", async () => {

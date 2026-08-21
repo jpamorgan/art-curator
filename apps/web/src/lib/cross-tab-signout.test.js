@@ -39,4 +39,17 @@ describe("cross-tab sign-out", () => {
 
     expect(calls).toEqual(["clear", "refetch"]);
   });
+
+  test("redirects the Following feed after cross-tab sign-out", async () => {
+    const calls = [];
+
+    await handleCrossTabSignout({
+      pathname: "/following",
+      clearPrivateArt: () => calls.push("clear"),
+      redirectToLogin: () => calls.push("redirect"),
+      refetchSession: async () => calls.push("refetch"),
+    });
+
+    expect(calls).toEqual(["clear", "redirect", "refetch"]);
+  });
 });

@@ -16,6 +16,7 @@ import {
 } from "./artwork-entities";
 import { ingestArtworkImages } from "./artwork-ingestion";
 import { authorizeInternalJob } from "./internal-job-auth";
+import { enqueueArtworkEnrichment } from "./enrichment";
 
 const CONSTRAINT =
   /SQLITE_CONSTRAINT|(?:UNIQUE|FOREIGN KEY|CHECK|NOT NULL|PRIMARY KEY) constraint failed/i;
@@ -109,6 +110,13 @@ function writeStatements(
     write,
     prepared(database, "DELETE FROM artwork_category WHERE artwork_id = ?", [artworkId]),
     prepared(database, "DELETE FROM artwork_style WHERE artwork_id = ?", [artworkId]),
+    prepared(database, "DELETE FROM artwork_artist WHERE artwork_id = ?", [artworkId]),
+    prepared(
+      database,
+      "INSERT INTO artwork_artist (artwork_id, artist_id, position) VALUES (?, ?, 0)",
+      [artworkId, shared.artistId],
+    ),
+    prepared(database, "UPDATE catalog_state SET version = version + 1 WHERE id = 1", []),
   ];
   for (const [kind, slugs, ids] of [
     ["category", draft.categorySlugs, shared.categoryIds],
@@ -190,7 +198,22 @@ export async function handleArtworkWriteRequest(
       );
     const parsed = artworkDraftSchema.safeParse(await readBoundedJson(request, 64 * 1_024));
     if (!parsed.success) throw new ArtworkRequestError(422, "invalid_artwork");
-    return Response.json(await writeArtwork(parsed.data, dependencies));
+    const result = await writeArtwork(parsed.data, dependencies);
+    if (result.outcome !== "duplicate")
+      await enqueueArtworkEnrichment(
+        dependencies.enrichmentQueue,
+        result.artwork.id,
+        result.outcome === "created" ? "import" : "update",
+        dependencies.now?.() ?? Date.now(),
+        {
+          database: dependencies.database,
+          embeddingModel: dependencies.embeddingModel,
+          promptVersion: dependencies.promptVersion,
+          sourceMode: parsed.data.isPublicDomain ? "image" : "metadata",
+          visionModel: dependencies.visionModel,
+        },
+      );
+    return Response.json(result);
   } catch (error) {
     if (error instanceof BoundedJsonError)
       return Response.json(

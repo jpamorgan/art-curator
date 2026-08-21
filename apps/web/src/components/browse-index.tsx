@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 
 import { PendingButtonLabel } from "@/components/pending-button-label";
 
-type BrowseKind = "galleries" | "styles";
+type BrowseKind = "artists" | "galleries" | "styles";
 
 export interface BrowseIndexItem {
   id: string;
@@ -82,6 +82,18 @@ function BrowseCard({ kind, item }: { kind: BrowseKind; item: BrowseIndexItem })
     </>
   );
 
+  if (kind === "artists") {
+    return (
+      <Link
+        to="/artists/$slug"
+        params={{ slug: item.slug }}
+        className="group min-w-0 rounded-[min(1vw,12px)] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950"
+      >
+        {content}
+      </Link>
+    );
+  }
+
   return kind === "galleries" ? (
     <Link
       to="/galleries/$slug"
@@ -133,8 +145,13 @@ export function BrowseIndex({
   }
 
   if (items.length === 0) {
-    const heading = kind === "galleries" ? "Galleries" : "Styles";
-    const message = kind === "galleries" ? "No galleries yet." : "No styles yet.";
+    const heading = kind === "artists" ? "Artists" : kind === "galleries" ? "Galleries" : "Styles";
+    const message =
+      kind === "artists"
+        ? "No artists yet."
+        : kind === "galleries"
+          ? "No galleries yet."
+          : "No styles yet.";
 
     return (
       <section
@@ -152,7 +169,7 @@ export function BrowseIndex({
   return (
     <section aria-labelledby="browse-heading" className="p-2 sm:p-3">
       <h1 id="browse-heading" className="sr-only">
-        {kind === "galleries" ? "Galleries" : "Styles"}
+        {kind === "artists" ? "Artists" : kind === "galleries" ? "Galleries" : "Styles"}
       </h1>
       <div
         role="list"
@@ -169,7 +186,7 @@ export function BrowseIndex({
 }
 
 export function BrowseIndexSkeleton({ kind }: { kind: BrowseKind }) {
-  const heading = kind === "galleries" ? "galleries" : "styles";
+  const heading = kind === "artists" ? "artists" : kind === "galleries" ? "galleries" : "styles";
 
   return (
     <section aria-busy="true" aria-live="polite" role="status" className="p-2 sm:p-3">

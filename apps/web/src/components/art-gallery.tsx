@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { ArtworkCard, getSafeAspectRatio, type ArtworkCardData } from "@/components/artwork-card";
 import { GallerySkeleton } from "@/components/gallery-skeleton";
 import { PendingButtonLabel } from "@/components/pending-button-label";
+import type { RecommendationReason } from "@/lib/discovery";
 import {
   GALLERY_GAP,
   GALLERY_GRID_CLASS_NAME,
@@ -26,9 +27,23 @@ export interface ArtGalleryProps {
   isFetchingNextPage?: boolean;
   isFetchNextPageError?: boolean;
   emptyMessage?: string;
+  recommendationReasons?: ReadonlyMap<string, RecommendationReason>;
+  onNotForMe?: (artwork: ArtworkCardData) => void;
+  onImpression?: (artwork: ArtworkCardData) => void;
+  onOpen?: (artwork: ArtworkCardData) => void;
 }
 
-function StaticGallery({ items, favoriteIds }: Pick<ArtGalleryProps, "items" | "favoriteIds">) {
+function StaticGallery({
+  items,
+  favoriteIds,
+  recommendationReasons,
+  onNotForMe,
+  onImpression,
+  onOpen,
+}: Pick<
+  ArtGalleryProps,
+  "items" | "favoriteIds" | "recommendationReasons" | "onNotForMe" | "onImpression" | "onOpen"
+>) {
   return (
     <div className={GALLERY_GRID_CLASS_NAME}>
       {items.slice(0, 15).map((artwork, index) => (
@@ -37,6 +52,10 @@ function StaticGallery({ items, favoriteIds }: Pick<ArtGalleryProps, "items" | "
           artwork={artwork}
           isFavorite={favoriteIds?.includes(artwork.id)}
           priority={index < 5}
+          recommendationReason={recommendationReasons?.get(artwork.id)}
+          onNotForMe={onNotForMe}
+          onImpression={onImpression}
+          onOpen={onOpen}
         />
       ))}
     </div>
@@ -56,6 +75,10 @@ export function ArtGallery({
   isFetchingNextPage = false,
   isFetchNextPageError = false,
   emptyMessage = "No artwork found.",
+  recommendationReasons,
+  onNotForMe,
+  onImpression,
+  onOpen,
 }: ArtGalleryProps) {
   const loadMoreRef = useRef<HTMLDivElement>(null);
   const [containerElement, setContainerElement] = useState<HTMLDivElement | null>(null);
@@ -75,7 +98,10 @@ export function ArtGallery({
     getItemKey: (index) => items[index]?.id ?? index,
     estimateSize: (index) => {
       const artwork = items[index];
-      return artwork ? itemWidth / getSafeAspectRatio(artwork) + 58 : itemWidth + 58;
+      const recommendationHeight = recommendationReasons?.has(artwork?.id ?? "") ? 42 : 0;
+      return artwork
+        ? itemWidth / getSafeAspectRatio(artwork) + 58 + recommendationHeight
+        : itemWidth + 58 + recommendationHeight;
     },
     enabled: isMounted && containerWidth > 0,
   });
@@ -161,7 +187,14 @@ export function ArtGallery({
     <div className="@container px-2 pt-2 pb-8 sm:px-3" aria-busy={isFetchingNextPage}>
       <div ref={setContainerElement} className="min-w-0">
         {!isMounted || containerWidth === 0 ? (
-          <StaticGallery items={items} favoriteIds={favoriteIds} />
+          <StaticGallery
+            items={items}
+            favoriteIds={favoriteIds}
+            recommendationReasons={recommendationReasons}
+            onNotForMe={onNotForMe}
+            onImpression={onImpression}
+            onOpen={onOpen}
+          />
         ) : (
           <div
             role="list"
@@ -192,6 +225,10 @@ export function ArtGallery({
                     artwork={artwork}
                     isFavorite={favoriteIds ? favoriteIdSet.has(artwork.id) : artwork.isFavorite}
                     priority={virtualItem.index < columns}
+                    recommendationReason={recommendationReasons?.get(artwork.id)}
+                    onNotForMe={onNotForMe}
+                    onImpression={onImpression}
+                    onOpen={onOpen}
                   />
                 </div>
               );

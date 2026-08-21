@@ -17,6 +17,7 @@ export const artworkCardSchema = z.object({
   slug,
   title: z.string(),
   artist: z.string(),
+  artistSlug: slug,
   date: z.string(),
   imageUrl: z.url(),
   thumbnailUrl: z.url(),
@@ -42,7 +43,18 @@ export const artworkListInputSchema = z.object({
   category: slug.optional(),
   gallery: slug.optional(),
   style: slug.optional(),
+  artist: slug.optional(),
   sort: z.enum(["recent", "title", "artist"]).default("recent"),
+});
+
+export const artistSummarySchema = z.object({
+  id: z.string(),
+  slug,
+  name: z.string(),
+  description: z.string(),
+  artworkCount: z.number().int().nonnegative(),
+  coverImageUrl: z.url().nullable(),
+  isFollowing: z.boolean(),
 });
 
 export const artworkDetailSchema = artworkCardSchema.extend({
@@ -72,6 +84,7 @@ export const gallerySummarySchema = z.object({
   description: z.string(),
   artworkCount: z.number().int().nonnegative(),
   coverImageUrl: z.url().nullable(),
+  isFollowing: z.boolean(),
 });
 
 export const styleSummarySchema = z.object({
@@ -81,6 +94,7 @@ export const styleSummarySchema = z.object({
   description: z.string(),
   artworkCount: z.number().int().nonnegative(),
   coverImageUrl: z.url().nullable(),
+  isFollowing: z.boolean(),
 });
 
 export const browseSlugInputSchema = z.object({ slug });

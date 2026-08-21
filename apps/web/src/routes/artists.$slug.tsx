@@ -11,30 +11,26 @@ import { loadBrowseRouteData } from "@/lib/browse-route-data";
 const SORT_OPTIONS = ["recent", "title", "artist"] as const;
 type SortOrder = (typeof SORT_OPTIONS)[number];
 
-interface SortSearch {
-  sort?: SortOrder;
-}
-
-function parseSortSearch(search: Record<string, unknown>): SortSearch {
+function parseSortSearch(search: Record<string, unknown>): { sort?: SortOrder } {
   const sort = SORT_OPTIONS.includes(search.sort as SortOrder)
     ? (search.sort as SortOrder)
     : undefined;
   return sort ? { sort } : {};
 }
 
-export const Route = createFileRoute("/styles/$slug")({
+export const Route = createFileRoute("/artists/$slug")({
   validateSearch: parseSortSearch,
   loaderDeps: ({ search }) => ({ sort: search.sort ?? "recent" }),
   loader: async ({ context, deps, params }) => {
     const data = await loadBrowseRouteData(
       () =>
         context.queryClient.ensureQueryData(
-          context.orpc.styles.bySlug.queryOptions({ input: { slug: params.slug } }),
+          context.orpc.artists.bySlug.queryOptions({ input: { slug: params.slug } }),
         ),
       () =>
         context.queryClient.ensureInfiniteQueryData(
           context.orpc.artworks.list.infiniteOptions({
-            input: getFilteredArtworkListInput("style", params.slug, deps.sort),
+            input: getFilteredArtworkListInput("artist", params.slug, deps.sort),
             initialPageParam: undefined,
             getNextPageParam: (lastPage) => lastPage.nextCursor ?? undefined,
           }),
@@ -44,40 +40,36 @@ export const Route = createFileRoute("/styles/$slug")({
     return data;
   },
   head: ({ loaderData }) => {
-    const style = loaderData?.style;
-    if (!style) {
-      return {
-        meta: [{ title: "Style — Art" }, { name: "description", content: "Browse art by style." }],
-      };
-    }
-
-    const title = `${style.name} — Art`;
-    const description = style.description || `Browse ${style.name} artwork.`;
-
+    const artist = loaderData?.artist;
     return {
-      meta: [{ title }, { name: "description", content: description }],
-      links: [{ rel: "canonical", href: `https://art.jpamorgan.com/styles/${style.slug}` }],
+      meta: [
+        { title: artist ? `${artist.name} — Art` : "Artist — Art" },
+        {
+          name: "description",
+          content: artist?.description || "Browse artwork by this artist.",
+        },
+      ],
     };
   },
-  pendingComponent: () => <FilteredGalleryPageSkeleton filter="style" />,
-  errorComponent: () => <FilteredGalleryRouteState kind="style" status="error" />,
-  notFoundComponent: () => <FilteredGalleryRouteState kind="style" status="not-found" />,
-  component: StyleRoute,
+  pendingComponent: () => <FilteredGalleryPageSkeleton filter="artist" />,
+  errorComponent: () => <FilteredGalleryRouteState kind="artist" status="error" />,
+  notFoundComponent: () => <FilteredGalleryRouteState kind="artist" status="not-found" />,
+  component: ArtistRoute,
 });
 
-function StyleRoute() {
+function ArtistRoute() {
   const { slug } = Route.useParams();
   const { sort } = Route.useSearch();
-  const { style } = Route.useLoaderData();
+  const { artist } = Route.useLoaderData();
 
   return (
     <FilteredGalleryPage
-      filter="style"
+      filter="artist"
       slug={slug}
-      entityId={style.id}
-      initialIsFollowing={style.isFollowing}
+      entityId={artist.id}
+      initialIsFollowing={artist.isFollowing}
       sort={sort}
-      title={style.name}
+      title={artist.name}
     />
   );
 }

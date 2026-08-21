@@ -16,6 +16,12 @@ import { logger } from "hono/logger";
 import { resolveArtworkArtifactExpectation, serveArtworkArtifact } from "./artifacts";
 import { handleCatalogArtworkSearchRequest } from "./catalog";
 import { handleArtworkWriteRequest } from "./artworks";
+import {
+  handleEnrichmentBackfillRequest,
+  handleEnrichmentQueue,
+  handleEnrichmentStatusRequest,
+  type EnrichmentJob,
+} from "./enrichment";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
 import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 import {
@@ -57,7 +63,28 @@ app.post("/internal/artworks", (c) =>
   handleArtworkWriteRequest(c.req.raw, {
     bucket: env.ARTWORKS,
     database: env.DB,
+    embeddingModel: env.OPENAI_EMBEDDING_MODEL,
+    enrichmentQueue: env.ENRICHMENT_QUEUE,
+    promptVersion: env.ENRICHMENT_PROMPT_VERSION,
     secret: env.ART_IMPORT_SECRET,
+    visionModel: env.OPENAI_VISION_MODEL,
+  }),
+);
+app.post("/internal/enrichment/backfill", (c) =>
+  handleEnrichmentBackfillRequest(c.req.raw, {
+    database: env.DB,
+    embeddingModel: env.OPENAI_EMBEDDING_MODEL,
+    promptVersion: env.ENRICHMENT_PROMPT_VERSION,
+    queue: env.ENRICHMENT_QUEUE,
+    secret: env.ART_IMPORT_SECRET,
+    visionModel: env.OPENAI_VISION_MODEL,
+  }),
+);
+app.get("/internal/enrichment/status", (c) =>
+  handleEnrichmentStatusRequest(c.req.raw, {
+    database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+    vectorIndex: env.ARTWORK_VECTORS,
   }),
 );
 app.post("/internal/artifact-sync", (c) =>
@@ -94,8 +121,15 @@ app.get("/internal/artworks", (c) =>
 );
 
 const guardFavoriteMutation = favoriteMutationGuard(authSecurityOptions(env).trustedOrigins);
-app.use("/rpc/favorites/toggle", guardFavoriteMutation);
-app.use("/api-reference/favorites/toggle", guardFavoriteMutation);
+for (const path of [
+  "/rpc/favorites/toggle",
+  "/api-reference/favorites/toggle",
+  "/rpc/following/toggle",
+  "/api-reference/following/toggle",
+  "/rpc/recommendations/setHidden",
+  "/api-reference/recommendations/setHidden",
+])
+  app.use(path, guardFavoriteMutation);
 
 app.on(["POST", "GET"], "/api/auth/*", (c) => createAuth().handler(c.req.raw));
 
@@ -148,4 +182,18 @@ app.get("/", (c) => {
   return c.text("OK");
 });
 
-export default app;
+export default {
+  fetch: app.fetch,
+  queue(batch: MessageBatch<EnrichmentJob>) {
+    return handleEnrichmentQueue(batch, {
+      analytics: env.RECOMMENDATION_ANALYTICS,
+      bucket: env.ARTWORKS,
+      database: env.DB,
+      embeddingModel: env.OPENAI_EMBEDDING_MODEL,
+      openAiApiKey: env.OPENAI_API_KEY,
+      promptVersion: env.ENRICHMENT_PROMPT_VERSION,
+      vectorIndex: env.ARTWORK_VECTORS,
+      visionModel: env.OPENAI_VISION_MODEL,
+    });
+  },
+};

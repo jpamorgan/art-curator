@@ -1,4 +1,4 @@
-import { isFavoritesPath } from "@/lib/private-session";
+import { isPrivateArtPath } from "@/lib/private-session";
 
 type SessionBroadcastMessage = {
   event?: string;
@@ -23,7 +23,7 @@ export async function handleCrossTabSignout({
   refetchSession,
 }: CrossTabSignoutActions) {
   clearPrivateArt();
-  if (isFavoritesPath(pathname)) redirectToLogin();
+  if (isPrivateArtPath(pathname)) redirectToLogin();
 
   try {
     await refetchSession();

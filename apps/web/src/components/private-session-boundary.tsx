@@ -7,7 +7,7 @@ import { authClient } from "@/lib/auth-client";
 import { handleCrossTabSignout, isSignoutBroadcast } from "@/lib/cross-tab-signout";
 import { clearPrivateArtCache } from "@/lib/private-art-cache";
 import {
-  isFavoritesPath,
+  isPrivateArtPath,
   shouldClearPrivateArtData,
   type ResolvedUserId,
 } from "@/lib/private-session";
@@ -47,10 +47,10 @@ export default function PrivateSessionBoundary() {
     }
     previousUserId.current = nextUserId;
 
-    if (nextUserId === null && isFavoritesPath(location.pathname)) {
+    if (nextUserId === null && isPrivateArtPath(location.pathname)) {
       void navigate({
         to: "/login",
-        search: { redirect: "/favorites" },
+        search: { redirect: location.pathname === "/following" ? "/following" : "/favorites" },
         replace: true,
       });
     }

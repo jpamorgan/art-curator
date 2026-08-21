@@ -24,7 +24,8 @@ describe("button style contract", () => {
 
     expect(headerSource).toContain("h-9 shrink-0 items-center gap-1 rounded-lg px-2");
     expect(headerSource).toContain("after:h-10");
-    expect(headerSource).toContain("hidden size-4 shrink-0 stroke-[1.75] min-[360px]:block");
+    expect(headerSource).not.toMatch(/Compass|Sparkles/u);
+    expect(headerSource).toContain('isExplore ? "bg-neutral-100 text-neutral-950"');
     expect(headerSource).toMatch(/aria-label="Saved"[\s\S]*?rounded-full/u);
   });
 

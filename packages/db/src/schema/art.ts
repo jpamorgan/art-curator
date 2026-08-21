@@ -56,6 +56,22 @@ export const gallery = sqliteTable(
   ],
 );
 
+export const artist = sqliteTable(
+  "artist",
+  {
+    id: text("id").primaryKey(),
+    slug: text("slug").notNull(),
+    name: text("name").notNull(),
+    description: text("description").default("").notNull(),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    uniqueIndex("artist_slug_unique").on(table.slug),
+    uniqueIndex("artist_name_unique").on(table.name),
+    index("artist_name_idx").on(table.name, table.id),
+  ],
+);
+
 export const artwork = sqliteTable(
   "artwork",
   {
@@ -171,6 +187,24 @@ export const artworkStyle = sqliteTable(
   ],
 );
 
+export const artworkArtist = sqliteTable(
+  "artwork_artist",
+  {
+    artworkId: text("artwork_id")
+      .notNull()
+      .references(() => artwork.id, { onDelete: "cascade" }),
+    artistId: text("artist_id")
+      .notNull()
+      .references(() => artist.id, { onDelete: "cascade" }),
+    position: integer("position").default(0).notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.artworkId, table.artistId] }),
+    index("artwork_artist_artist_idx").on(table.artistId, table.artworkId),
+    index("artwork_artist_artwork_position_idx").on(table.artworkId, table.position),
+  ],
+);
+
 export const favorite = sqliteTable(
   "favorite",
   {
@@ -189,6 +223,123 @@ export const favorite = sqliteTable(
   ],
 );
 
+export const followedArtist = sqliteTable(
+  "followed_artist",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    artistId: text("artist_id")
+      .notNull()
+      .references(() => artist.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.artistId] }),
+    index("followed_artist_user_recent_idx").on(table.userId, table.createdAt, table.artistId),
+  ],
+);
+
+export const followedGallery = sqliteTable(
+  "followed_gallery",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    galleryId: text("gallery_id")
+      .notNull()
+      .references(() => gallery.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.galleryId] }),
+    index("followed_gallery_user_recent_idx").on(table.userId, table.createdAt, table.galleryId),
+  ],
+);
+
+export const followedStyle = sqliteTable(
+  "followed_style",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    styleId: text("style_id")
+      .notNull()
+      .references(() => style.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.styleId] }),
+    index("followed_style_user_recent_idx").on(table.userId, table.createdAt, table.styleId),
+  ],
+);
+
+export const hiddenArtwork = sqliteTable(
+  "hidden_artwork",
+  {
+    userId: text("user_id")
+      .notNull()
+      .references(() => user.id, { onDelete: "cascade" }),
+    artworkId: text("artwork_id")
+      .notNull()
+      .references(() => artwork.id, { onDelete: "cascade" }),
+    createdAt: timestamp("created_at"),
+  },
+  (table) => [
+    primaryKey({ columns: [table.userId, table.artworkId] }),
+    index("hidden_artwork_user_recent_idx").on(table.userId, table.createdAt, table.artworkId),
+  ],
+);
+
+export const artworkEnrichment = sqliteTable(
+  "artwork_enrichment",
+  {
+    artworkId: text("artwork_id")
+      .primaryKey()
+      .references(() => artwork.id, { onDelete: "cascade" }),
+    status: text("status", { enum: ["pending", "processing", "ready", "failed"] }).notNull(),
+    sourceMode: text("source_mode", { enum: ["image", "metadata"] }).notNull(),
+    provider: text("provider").default("openai").notNull(),
+    visionModel: text("vision_model").notNull(),
+    embeddingModel: text("embedding_model").notNull(),
+    embeddingDimensions: integer("embedding_dimensions").default(512).notNull(),
+    promptVersion: text("prompt_version").notNull(),
+    contentFingerprint: text("content_fingerprint").notNull(),
+    canonicalText: text("canonical_text").default("").notNull(),
+    visualFacets: text("visual_facets").default("{}").notNull(),
+    attempts: integer("attempts").default(0).notNull(),
+    lastError: text("last_error"),
+    vectorMutationId: text("vector_mutation_id"),
+    queuedAt: integer("queued_at", { mode: "timestamp_ms" }),
+    processedAt: integer("processed_at", { mode: "timestamp_ms" }),
+    updatedAt: timestamp("updated_at").$onUpdate(() => /* @__PURE__ */ new Date()),
+  },
+  (table) => [
+    index("artwork_enrichment_status_updated_idx").on(table.status, table.updatedAt),
+    check("artwork_enrichment_dimensions_check", sql`${table.embeddingDimensions} > 0`),
+    check("artwork_enrichment_attempts_check", sql`${table.attempts} >= 0`),
+  ],
+);
+
+export const tasteProfile = sqliteTable(
+  "taste_profile",
+  {
+    userId: text("user_id")
+      .primaryKey()
+      .references(() => user.id, { onDelete: "cascade" }),
+    revision: integer("revision").default(0).notNull(),
+    embedding: text("embedding"),
+    embeddingDimensions: integer("embedding_dimensions").default(512).notNull(),
+    artworkCount: integer("artwork_count").default(0).notNull(),
+    updatedAt: timestamp("updated_at").$onUpdate(() => /* @__PURE__ */ new Date()),
+  },
+  (table) => [
+    check("taste_profile_revision_check", sql`${table.revision} >= 0`),
+    check("taste_profile_dimensions_check", sql`${table.embeddingDimensions} > 0`),
+    check("taste_profile_artwork_count_check", sql`${table.artworkCount} >= 0`),
+  ],
+);
+
 export const artInbox = sqliteTable(
   "art_inbox",
   {
@@ -200,6 +351,25 @@ export const artInbox = sqliteTable(
     uniqueIndex("art_inbox_url_unique").on(table.url),
     index("art_inbox_created_idx").on(table.createdAt, table.id),
     check("art_inbox_url_length_check", sql`length(${table.url}) between 1 and 2048`),
+  ],
+);
+
+// Rollout sentinels retained for compatibility with the catalog import transaction.
+export const catalogState = sqliteTable(
+  "catalog_state",
+  { id: integer("id").primaryKey(), version: integer("version").notNull() },
+  (table) => [
+    check("catalog_state_singleton_check", sql`${table.id} = 1`),
+    check("catalog_state_version_check", sql`${table.version} > 0`),
+  ],
+);
+
+export const catalogImportGuard = sqliteTable(
+  "catalog_import_guard",
+  { id: integer("id").primaryKey(), valid: integer("valid").notNull() },
+  (table) => [
+    check("catalog_import_guard_singleton_check", sql`${table.id} = 1`),
+    check("catalog_import_guard_valid_check", sql`${table.valid} = 1`),
   ],
 );
 
@@ -228,6 +398,12 @@ export const artworkRelations = relations(artwork, ({ many, one }) => ({
   categories: many(artworkCategory),
   styles: many(artworkStyle),
   favorites: many(favorite),
+  artists: many(artworkArtist),
+}));
+
+export const artistRelations = relations(artist, ({ many }) => ({
+  artworks: many(artworkArtist),
+  followers: many(followedArtist),
 }));
 
 export const categoryRelations = relations(category, ({ many }) => ({
@@ -258,6 +434,11 @@ export const artworkStyleRelations = relations(artworkStyle, ({ one }) => ({
     fields: [artworkStyle.styleId],
     references: [style.id],
   }),
+}));
+
+export const artworkArtistRelations = relations(artworkArtist, ({ one }) => ({
+  artwork: one(artwork, { fields: [artworkArtist.artworkId], references: [artwork.id] }),
+  artist: one(artist, { fields: [artworkArtist.artistId], references: [artist.id] }),
 }));
 
 export const favoriteRelations = relations(favorite, ({ one }) => ({

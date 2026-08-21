@@ -8,13 +8,22 @@ const trustedOrigins = ["https://art.jpamorgan.com", "https://api.art.jpamorgan.
 function testApp() {
   const app = new Hono();
   const guard = favoriteMutationGuard(trustedOrigins);
-  for (const path of ["/rpc/favorites/toggle", "/api-reference/favorites/toggle"]) {
+  for (const path of protectedMutationPaths) {
     app.use(path, guard);
     app.post(path, (context) => context.text("handler reached"));
   }
   app.post("/rpc/artworks/list", (context) => context.text("public handler reached"));
   return app;
 }
+
+const protectedMutationPaths = [
+  "/rpc/favorites/toggle",
+  "/api-reference/favorites/toggle",
+  "/rpc/following/toggle",
+  "/api-reference/following/toggle",
+  "/rpc/recommendations/setHidden",
+  "/api-reference/recommendations/setHidden",
+];
 
 function multipartBody() {
   const form = new FormData();
@@ -23,8 +32,8 @@ function multipartBody() {
 }
 
 describe("favorite mutation origin guard", () => {
-  test("rejects cross-site mutations on both transport aliases", async () => {
-    for (const path of ["/rpc/favorites/toggle", "/api-reference/favorites/toggle"]) {
+  test("rejects cross-site protected mutations on every transport alias", async () => {
+    for (const path of protectedMutationPaths) {
       const response = await testApp().request(path, {
         method: "POST",
         headers: {
@@ -39,8 +48,8 @@ describe("favorite mutation origin guard", () => {
     }
   });
 
-  test("allows the exact trusted web origin on both transport aliases", async () => {
-    for (const path of ["/rpc/favorites/toggle", "/api-reference/favorites/toggle"]) {
+  test("allows the exact trusted web origin on every protected mutation", async () => {
+    for (const path of protectedMutationPaths) {
       const response = await testApp().request(path, {
         method: "POST",
         headers: {
@@ -66,7 +75,7 @@ describe("favorite mutation origin guard", () => {
   });
 
   test("rejects missing Origin on both aliases while keeping unrelated RPC available", async () => {
-    for (const path of ["/rpc/favorites/toggle", "/api-reference/favorites/toggle"]) {
+    for (const path of protectedMutationPaths) {
       const response = await testApp().request(path, {
         method: "POST",
         body: multipartBody(),

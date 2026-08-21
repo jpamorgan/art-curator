@@ -10,6 +10,8 @@ A minimal web app for discovering and saving physical art, styles, and galleries
 - Hono and oRPC
 - Better Auth
 - Drizzle and Cloudflare D1
+- OpenAI vision and text embeddings
+- Cloudflare Vectorize, Queues, and Analytics Engine
 - Private Cloudflare R2 image storage
 - Tailwind CSS
 - Bun and Turborepo
@@ -23,6 +25,10 @@ bun run dev
 ```
 
 The web app runs at `http://localhost:3001` and the API runs at `http://localhost:3000`.
+
+Local development serves recommendations from the deterministic D1 fallback. OpenAI
+enrichment, Vectorize backfill, and the production readiness gate run during remote
+deployments.
 
 Environment templates live beside each app and the infrastructure package. Use separate generated values:
 
@@ -58,6 +64,28 @@ artifacts, writes artwork relationships atomically, and removes an optional inbo
 with a created or updated outcome. Duplicate outcomes deliberately keep the inbox row for
 an explicit dismissal decision.
 
+## Discovery and recommendations
+
+- **Explore** is an adventurous, non-personalized catalog mix and works signed out.
+- **For You** blends saved works, followed artists/galleries/styles, recent activity,
+  visual-semantic similarity, novelty, freshness, and diversity. New accounts choose a
+  few favorites to establish an initial taste profile.
+- **Following** is a chronological feed of the newest works from followed entities.
+- **Radio** accepts an optional artwork seed. It can combine that seed with the user's
+  taste profile or run non-personalized, with familiar, balanced, and adventurous
+  discovery presets.
+
+Artwork metadata and permission-eligible images are analyzed into structured visual and
+semantic facets. Canonical facet text is embedded at 512 dimensions and stored in
+Cloudflare Vectorize; images remain in private R2 and are not themselves stored in the
+vector index. Metadata-only enrichment is used when image-analysis permission is absent.
+OpenAI calls happen asynchronously through a Cloudflare Queue, never in page-serving
+requests. Ranking falls back to deterministic D1 signals when Vectorize is unavailable.
+
+Recommendation impressions and opens are recorded with opaque recommendation tokens.
+Saved works and follows are positive signals; **Not for me** supplies explicit negative
+signals. No user identifiers are written to Analytics Engine.
+
 ## Deploy
 
 ```bash
@@ -65,4 +93,7 @@ bun run deploy
 ```
 
 Production uses `art.jpamorgan.com` for the web app and `api.art.jpamorgan.com` for the API.
-Deploys apply D1 migrations and idempotently sync the curated R2 seed before publishing the Workers.
+Deploys apply D1 migrations, idempotently sync the curated R2 seed, enqueue enrichment,
+and verify every ready D1 enrichment row exists in Vectorize before publishing the web
+Worker. Production requires `OPENAI_API_KEY`; model names and the enrichment prompt
+version can be overridden with the variables shown in `apps/server/.env.example`.

@@ -1,8 +1,8 @@
 {
-  "id": "02c1b097-46f9-40e9-b47c-a9cb80b8c11e",
-  "prevId": "0406baa7-618d-4f1c-844c-44ddd38693d4",
   "version": "6",
   "dialect": "sqlite",
+  "id": "9c68b1ee-893b-461b-9198-0a1953231c0a",
+  "prevId": "02c1b097-46f9-40e9-b47c-a9cb80b8c11e",
   "tables": {
     "art_inbox": {
       "name": "art_inbox",
@@ -33,17 +33,12 @@
       "indexes": {
         "art_inbox_url_unique": {
           "name": "art_inbox_url_unique",
-          "columns": [
-            "url"
-          ],
+          "columns": ["url"],
           "isUnique": true
         },
         "art_inbox_created_idx": {
           "name": "art_inbox_created_idx",
-          "columns": [
-            "created_at",
-            "id"
-          ],
+          "columns": ["created_at", "id"],
           "isUnique": false
         }
       },
@@ -54,6 +49,135 @@
         "art_inbox_url_length_check": {
           "name": "art_inbox_url_length_check",
           "value": "length(\"art_inbox\".\"url\") between 1 and 2048"
+        }
+      }
+    },
+    "artist": {
+      "name": "artist",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "slug": {
+          "name": "slug",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "artist_slug_unique": {
+          "name": "artist_slug_unique",
+          "columns": ["slug"],
+          "isUnique": true
+        },
+        "artist_name_unique": {
+          "name": "artist_name_unique",
+          "columns": ["name"],
+          "isUnique": true
+        },
+        "artist_name_idx": {
+          "name": "artist_name_idx",
+          "columns": ["name", "id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "catalog_import_guard": {
+      "name": "catalog_import_guard",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "valid": {
+          "name": "valid",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "catalog_import_guard_singleton_check": {
+          "name": "catalog_import_guard_singleton_check",
+          "value": "\"catalog_import_guard\".\"id\" = 1"
+        },
+        "catalog_import_guard_valid_check": {
+          "name": "catalog_import_guard_valid_check",
+          "value": "\"catalog_import_guard\".\"valid\" = 1"
+        }
+      }
+    },
+    "catalog_state": {
+      "name": "catalog_state",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "integer",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "version": {
+          "name": "version",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "catalog_state_singleton_check": {
+          "name": "catalog_state_singleton_check",
+          "value": "\"catalog_state\".\"id\" = 1"
+        },
+        "catalog_state_version_check": {
+          "name": "catalog_state_version_check",
+          "value": "\"catalog_state\".\"version\" > 0"
         }
       }
     },
@@ -292,64 +416,42 @@
       "indexes": {
         "artwork_slug_unique": {
           "name": "artwork_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "artwork_source_external_unique": {
           "name": "artwork_source_external_unique",
-          "columns": [
-            "source_id",
-            "source_external_id"
-          ],
+          "columns": ["source_id", "source_external_id"],
           "isUnique": true
         },
         "artwork_source_idx": {
           "name": "artwork_source_idx",
-          "columns": [
-            "source_id"
-          ],
+          "columns": ["source_id"],
           "isUnique": false
         },
         "artwork_gallery_idx": {
           "name": "artwork_gallery_idx",
-          "columns": [
-            "gallery_id"
-          ],
+          "columns": ["gallery_id"],
           "isUnique": false
         },
         "artwork_gallery_recent_idx": {
           "name": "artwork_gallery_recent_idx",
-          "columns": [
-            "gallery_id",
-            "curated_at",
-            "id"
-          ],
+          "columns": ["gallery_id", "curated_at", "id"],
           "isUnique": false
         },
         "artwork_recent_idx": {
           "name": "artwork_recent_idx",
-          "columns": [
-            "curated_at",
-            "id"
-          ],
+          "columns": ["curated_at", "id"],
           "isUnique": false
         },
         "artwork_title_idx": {
           "name": "artwork_title_idx",
-          "columns": [
-            "title",
-            "id"
-          ],
+          "columns": ["title", "id"],
           "isUnique": false
         },
         "artwork_artist_idx": {
           "name": "artwork_artist_idx",
-          "columns": [
-            "artist",
-            "id"
-          ],
+          "columns": ["artist", "id"],
           "isUnique": false
         }
       },
@@ -357,28 +459,20 @@
         "artwork_source_id_source_id_fk": {
           "name": "artwork_source_id_source_id_fk",
           "tableFrom": "artwork",
-          "columnsFrom": [
-            "source_id"
-          ],
           "tableTo": "source",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "artwork_gallery_id_gallery_id_fk": {
           "name": "artwork_gallery_id_gallery_id_fk",
           "tableFrom": "artwork",
-          "columnsFrom": [
-            "gallery_id"
-          ],
           "tableTo": "gallery",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["gallery_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -393,6 +487,73 @@
           "value": "\"artwork\".\"image_height\" > 0"
         }
       }
+    },
+    "artwork_artist": {
+      "name": "artwork_artist",
+      "columns": {
+        "artwork_id": {
+          "name": "artwork_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "artist_id": {
+          "name": "artist_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "position": {
+          "name": "position",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        }
+      },
+      "indexes": {
+        "artwork_artist_artist_idx": {
+          "name": "artwork_artist_artist_idx",
+          "columns": ["artist_id", "artwork_id"],
+          "isUnique": false
+        },
+        "artwork_artist_artwork_position_idx": {
+          "name": "artwork_artist_artwork_position_idx",
+          "columns": ["artwork_id", "position"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "artwork_artist_artwork_id_artwork_id_fk": {
+          "name": "artwork_artist_artwork_id_artwork_id_fk",
+          "tableFrom": "artwork_artist",
+          "tableTo": "artwork",
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "artwork_artist_artist_id_artist_id_fk": {
+          "name": "artwork_artist_artist_id_artist_id_fk",
+          "tableFrom": "artwork_artist",
+          "tableTo": "artist",
+          "columnsFrom": ["artist_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "artwork_artist_artwork_id_artist_id_pk": {
+          "columns": ["artwork_id", "artist_id"],
+          "name": "artwork_artist_artwork_id_artist_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
     },
     "artwork_category": {
       "name": "artwork_category",
@@ -415,10 +576,7 @@
       "indexes": {
         "artwork_category_category_idx": {
           "name": "artwork_category_category_idx",
-          "columns": [
-            "category_id",
-            "artwork_id"
-          ],
+          "columns": ["category_id", "artwork_id"],
           "isUnique": false
         }
       },
@@ -426,41 +584,190 @@
         "artwork_category_artwork_id_artwork_id_fk": {
           "name": "artwork_category_artwork_id_artwork_id_fk",
           "tableFrom": "artwork_category",
-          "columnsFrom": [
-            "artwork_id"
-          ],
           "tableTo": "artwork",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "artwork_category_category_id_category_id_fk": {
           "name": "artwork_category_category_id_category_id_fk",
           "tableFrom": "artwork_category",
-          "columnsFrom": [
-            "category_id"
-          ],
           "tableTo": "category",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["category_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "artwork_category_artwork_id_category_id_pk": {
-          "columns": [
-            "artwork_id",
-            "category_id"
-          ],
+          "columns": ["artwork_id", "category_id"],
           "name": "artwork_category_artwork_id_category_id_pk"
         }
       },
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "artwork_enrichment": {
+      "name": "artwork_enrichment",
+      "columns": {
+        "artwork_id": {
+          "name": "artwork_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "source_mode": {
+          "name": "source_mode",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "provider": {
+          "name": "provider",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'openai'"
+        },
+        "vision_model": {
+          "name": "vision_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "embedding_model": {
+          "name": "embedding_model",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "embedding_dimensions": {
+          "name": "embedding_dimensions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 512
+        },
+        "prompt_version": {
+          "name": "prompt_version",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "content_fingerprint": {
+          "name": "content_fingerprint",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "canonical_text": {
+          "name": "canonical_text",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "''"
+        },
+        "visual_facets": {
+          "name": "visual_facets",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        },
+        "attempts": {
+          "name": "attempts",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "last_error": {
+          "name": "last_error",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "vector_mutation_id": {
+          "name": "vector_mutation_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "queued_at": {
+          "name": "queued_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "processed_at": {
+          "name": "processed_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "artwork_enrichment_status_updated_idx": {
+          "name": "artwork_enrichment_status_updated_idx",
+          "columns": ["status", "updated_at"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "artwork_enrichment_artwork_id_artwork_id_fk": {
+          "name": "artwork_enrichment_artwork_id_artwork_id_fk",
+          "tableFrom": "artwork_enrichment",
+          "tableTo": "artwork",
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "artwork_enrichment_dimensions_check": {
+          "name": "artwork_enrichment_dimensions_check",
+          "value": "\"artwork_enrichment\".\"embedding_dimensions\" > 0"
+        },
+        "artwork_enrichment_attempts_check": {
+          "name": "artwork_enrichment_attempts_check",
+          "value": "\"artwork_enrichment\".\"attempts\" >= 0"
+        }
+      }
     },
     "artwork_style": {
       "name": "artwork_style",
@@ -483,10 +790,7 @@
       "indexes": {
         "artwork_style_style_idx": {
           "name": "artwork_style_style_idx",
-          "columns": [
-            "style_id",
-            "artwork_id"
-          ],
+          "columns": ["style_id", "artwork_id"],
           "isUnique": false
         }
       },
@@ -494,107 +798,30 @@
         "artwork_style_artwork_id_artwork_id_fk": {
           "name": "artwork_style_artwork_id_artwork_id_fk",
           "tableFrom": "artwork_style",
-          "columnsFrom": [
-            "artwork_id"
-          ],
           "tableTo": "artwork",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "artwork_style_style_id_style_id_fk": {
           "name": "artwork_style_style_id_style_id_fk",
           "tableFrom": "artwork_style",
-          "columnsFrom": [
-            "style_id"
-          ],
           "tableTo": "style",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "artwork_style_artwork_id_style_id_pk": {
-          "columns": [
-            "artwork_id",
-            "style_id"
-          ],
+          "columns": ["artwork_id", "style_id"],
           "name": "artwork_style_artwork_id_style_id_pk"
         }
       },
       "uniqueConstraints": {},
       "checkConstraints": {}
-    },
-    "catalog_import_guard": {
-      "name": "catalog_import_guard",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "valid": {
-          "name": "valid",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "catalog_import_guard_singleton_check": {
-          "name": "catalog_import_guard_singleton_check",
-          "value": "\"catalog_import_guard\".\"id\" = 1"
-        },
-        "catalog_import_guard_valid_check": {
-          "name": "catalog_import_guard_valid_check",
-          "value": "\"catalog_import_guard\".\"valid\" = 1"
-        }
-      }
-    },
-    "catalog_state": {
-      "name": "catalog_state",
-      "columns": {
-        "id": {
-          "name": "id",
-          "type": "integer",
-          "primaryKey": true,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "version": {
-          "name": "version",
-          "type": "integer",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {},
-      "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {
-        "catalog_state_singleton_check": {
-          "name": "catalog_state_singleton_check",
-          "value": "\"catalog_state\".\"id\" = 1"
-        },
-        "catalog_state_version_check": {
-          "name": "catalog_state_version_check",
-          "value": "\"catalog_state\".\"version\" > 0"
-        }
-      }
     },
     "category": {
       "name": "category",
@@ -639,17 +866,12 @@
       "indexes": {
         "category_slug_unique": {
           "name": "category_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "category_sort_idx": {
           "name": "category_sort_idx",
-          "columns": [
-            "sort_order",
-            "name"
-          ],
+          "columns": ["sort_order", "name"],
           "isUnique": false
         }
       },
@@ -687,18 +909,12 @@
       "indexes": {
         "favorite_user_recent_idx": {
           "name": "favorite_user_recent_idx",
-          "columns": [
-            "user_id",
-            "created_at",
-            "artwork_id"
-          ],
+          "columns": ["user_id", "created_at", "artwork_id"],
           "isUnique": false
         },
         "favorite_artwork_idx": {
           "name": "favorite_artwork_idx",
-          "columns": [
-            "artwork_id"
-          ],
+          "columns": ["artwork_id"],
           "isUnique": false
         }
       },
@@ -706,37 +922,212 @@
         "favorite_user_id_user_id_fk": {
           "name": "favorite_user_id_user_id_fk",
           "tableFrom": "favorite",
-          "columnsFrom": [
-            "user_id"
-          ],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         },
         "favorite_artwork_id_artwork_id_fk": {
           "name": "favorite_artwork_id_artwork_id_fk",
           "tableFrom": "favorite",
-          "columnsFrom": [
-            "artwork_id"
-          ],
           "tableTo": "artwork",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "favorite_user_id_artwork_id_pk": {
-          "columns": [
-            "user_id",
-            "artwork_id"
-          ],
+          "columns": ["user_id", "artwork_id"],
           "name": "favorite_user_id_artwork_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "followed_artist": {
+      "name": "followed_artist",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "artist_id": {
+          "name": "artist_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "followed_artist_user_recent_idx": {
+          "name": "followed_artist_user_recent_idx",
+          "columns": ["user_id", "created_at", "artist_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "followed_artist_user_id_user_id_fk": {
+          "name": "followed_artist_user_id_user_id_fk",
+          "tableFrom": "followed_artist",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "followed_artist_artist_id_artist_id_fk": {
+          "name": "followed_artist_artist_id_artist_id_fk",
+          "tableFrom": "followed_artist",
+          "tableTo": "artist",
+          "columnsFrom": ["artist_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "followed_artist_user_id_artist_id_pk": {
+          "columns": ["user_id", "artist_id"],
+          "name": "followed_artist_user_id_artist_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "followed_gallery": {
+      "name": "followed_gallery",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "gallery_id": {
+          "name": "gallery_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "followed_gallery_user_recent_idx": {
+          "name": "followed_gallery_user_recent_idx",
+          "columns": ["user_id", "created_at", "gallery_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "followed_gallery_user_id_user_id_fk": {
+          "name": "followed_gallery_user_id_user_id_fk",
+          "tableFrom": "followed_gallery",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "followed_gallery_gallery_id_gallery_id_fk": {
+          "name": "followed_gallery_gallery_id_gallery_id_fk",
+          "tableFrom": "followed_gallery",
+          "tableTo": "gallery",
+          "columnsFrom": ["gallery_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "followed_gallery_user_id_gallery_id_pk": {
+          "columns": ["user_id", "gallery_id"],
+          "name": "followed_gallery_user_id_gallery_id_pk"
+        }
+      },
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "followed_style": {
+      "name": "followed_style",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "style_id": {
+          "name": "style_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "followed_style_user_recent_idx": {
+          "name": "followed_style_user_recent_idx",
+          "columns": ["user_id", "created_at", "style_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "followed_style_user_id_user_id_fk": {
+          "name": "followed_style_user_id_user_id_fk",
+          "tableFrom": "followed_style",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "followed_style_style_id_style_id_fk": {
+          "name": "followed_style_style_id_style_id_fk",
+          "tableFrom": "followed_style",
+          "tableTo": "style",
+          "columnsFrom": ["style_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "followed_style_user_id_style_id_pk": {
+          "columns": ["user_id", "style_id"],
+          "name": "followed_style_user_id_style_id_pk"
         }
       },
       "uniqueConstraints": {},
@@ -806,16 +1197,12 @@
       "indexes": {
         "gallery_slug_unique": {
           "name": "gallery_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "gallery_source_idx": {
           "name": "gallery_source_idx",
-          "columns": [
-            "source_id"
-          ],
+          "columns": ["source_id"],
           "isUnique": false
         }
       },
@@ -823,18 +1210,76 @@
         "gallery_source_id_source_id_fk": {
           "name": "gallery_source_id_source_id_fk",
           "tableFrom": "gallery",
-          "columnsFrom": [
-            "source_id"
-          ],
           "tableTo": "source",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["source_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "hidden_artwork": {
+      "name": "hidden_artwork",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "artwork_id": {
+          "name": "artwork_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {
+        "hidden_artwork_user_recent_idx": {
+          "name": "hidden_artwork_user_recent_idx",
+          "columns": ["user_id", "created_at", "artwork_id"],
+          "isUnique": false
+        }
+      },
+      "foreignKeys": {
+        "hidden_artwork_user_id_user_id_fk": {
+          "name": "hidden_artwork_user_id_user_id_fk",
+          "tableFrom": "hidden_artwork",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "hidden_artwork_artwork_id_artwork_id_fk": {
+          "name": "hidden_artwork_artwork_id_artwork_id_fk",
+          "tableFrom": "hidden_artwork",
+          "tableTo": "artwork",
+          "columnsFrom": ["artwork_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "hidden_artwork_user_id_artwork_id_pk": {
+          "columns": ["user_id", "artwork_id"],
+          "name": "hidden_artwork_user_id_artwork_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -902,9 +1347,7 @@
       "indexes": {
         "source_slug_unique": {
           "name": "source_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         }
       },
@@ -961,17 +1404,12 @@
       "indexes": {
         "style_slug_unique": {
           "name": "style_slug_unique",
-          "columns": [
-            "slug"
-          ],
+          "columns": ["slug"],
           "isUnique": true
         },
         "style_sort_idx": {
           "name": "style_sort_idx",
-          "columns": [
-            "sort_order",
-            "name"
-          ],
+          "columns": ["sort_order", "name"],
           "isUnique": false
         }
       },
@@ -979,6 +1417,85 @@
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}
+    },
+    "taste_profile": {
+      "name": "taste_profile",
+      "columns": {
+        "user_id": {
+          "name": "user_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "revision": {
+          "name": "revision",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "embedding": {
+          "name": "embedding",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "embedding_dimensions": {
+          "name": "embedding_dimensions",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 512
+        },
+        "artwork_count": {
+          "name": "artwork_count",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": 0
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "(cast(unixepoch('subsecond') * 1000 as integer))"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "taste_profile_user_id_user_id_fk": {
+          "name": "taste_profile_user_id_user_id_fk",
+          "tableFrom": "taste_profile",
+          "tableTo": "user",
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {
+        "taste_profile_revision_check": {
+          "name": "taste_profile_revision_check",
+          "value": "\"taste_profile\".\"revision\" >= 0"
+        },
+        "taste_profile_dimensions_check": {
+          "name": "taste_profile_dimensions_check",
+          "value": "\"taste_profile\".\"embedding_dimensions\" > 0"
+        },
+        "taste_profile_artwork_count_check": {
+          "name": "taste_profile_artwork_count_check",
+          "value": "\"taste_profile\".\"artwork_count\" >= 0"
+        }
+      }
     },
     "account": {
       "name": "account",
@@ -1079,9 +1596,7 @@
       "indexes": {
         "account_userId_idx": {
           "name": "account_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -1089,15 +1604,11 @@
         "account_user_id_user_id_fk": {
           "name": "account_user_id_user_id_fk",
           "tableFrom": "account",
-          "columnsFrom": [
-            "user_id"
-          ],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1139,9 +1650,7 @@
       "indexes": {
         "rate_limit_key_unique": {
           "name": "rate_limit_key_unique",
-          "columns": [
-            "key"
-          ],
+          "columns": ["key"],
           "isUnique": true
         }
       },
@@ -1214,16 +1723,12 @@
       "indexes": {
         "session_token_unique": {
           "name": "session_token_unique",
-          "columns": [
-            "token"
-          ],
+          "columns": ["token"],
           "isUnique": true
         },
         "session_userId_idx": {
           "name": "session_userId_idx",
-          "columns": [
-            "user_id"
-          ],
+          "columns": ["user_id"],
           "isUnique": false
         }
       },
@@ -1231,15 +1736,11 @@
         "session_user_id_user_id_fk": {
           "name": "session_user_id_user_id_fk",
           "tableFrom": "session",
-          "columnsFrom": [
-            "user_id"
-          ],
           "tableTo": "user",
-          "columnsTo": [
-            "id"
-          ],
-          "onUpdate": "no action",
-          "onDelete": "cascade"
+          "columnsFrom": ["user_id"],
+          "columnsTo": ["id"],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {},
@@ -1305,9 +1806,7 @@
       "indexes": {
         "user_email_unique": {
           "name": "user_email_unique",
-          "columns": [
-            "email"
-          ],
+          "columns": ["email"],
           "isUnique": true
         }
       },
@@ -1367,9 +1866,7 @@
       "indexes": {
         "verification_identifier_idx": {
           "name": "verification_identifier_idx",
-          "columns": [
-            "identifier"
-          ],
+          "columns": ["identifier"],
           "isUnique": false
         }
       },
@@ -1382,9 +1879,9 @@
   "views": {},
   "enums": {},
   "_meta": {
-    "columns": {},
     "schemas": {},
-    "tables": {}
+    "tables": {},
+    "columns": {}
   },
   "internal": {
     "indexes": {}

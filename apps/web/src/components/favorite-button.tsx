@@ -135,6 +135,7 @@ export default function FavoriteButton({
       }
       void queryClient.invalidateQueries({ queryKey: orpc.favorites.key() });
       void queryClient.invalidateQueries({ queryKey: orpc.artworks.key() });
+      void queryClient.invalidateQueries({ queryKey: orpc.recommendations.key() });
     },
   });
 

@@ -166,30 +166,33 @@ describe("SSR and hydrated navigation contract", () => {
   test("keeps the primary header compact, accessible, and taxonomy-free", async () => {
     const headerSource = await readSource("components/header.tsx");
 
-    expect(headerSource).toContain('<nav aria-label="Primary"');
+    expect(headerSource).toContain('aria-label="Primary"');
     expect(headerSource).toContain(">\n            Art\n");
     expect(headerSource).toContain("<span>Explore</span>");
     expect(headerSource).toContain("<span>For you</span>");
+    expect(headerSource).toContain("<span>Following</span>");
     expect(headerSource).toContain('aria-label="Saved"');
     expect(headerSource).toContain("<SubmissionDialog />");
     expect(headerSource).toContain('aria-current={isExplore ? "page" : undefined}');
     expect(headerSource).toContain('aria-current={isForYou ? "page" : undefined}');
+    expect(headerSource).toContain('aria-current={isFollowing ? "page" : undefined}');
     expect(
       headerSource.match(
         /activeOptions=\{\{ exact: true, includeSearch: true, explicitUndefined: true \}\}/gu,
       ),
     ).toHaveLength(3);
-    expect(headerSource).toMatch(/>\s*Art\s*<\/Link>\s*<nav aria-label="Primary"/u);
+    expect(headerSource).toMatch(/>\s*Art\s*<\/Link>\s*<nav[\s\S]*?aria-label="Primary"/u);
     expect(headerSource).toContain("active:scale-[0.96]");
     expect(headerSource).not.toMatch(/Galleries|Styles|selectedSort|<select/u);
   });
 
-  test("uses the feed marker only for tab identity, not artwork query inputs", async () => {
+  test("uses the feed marker to select personalization without leaking it into API inputs", async () => {
     const homeRouteSource = await readSource("routes/index.tsx");
 
     expect(homeRouteSource).toContain("loaderDeps:");
-    expect(homeRouteSource).not.toContain("deps.feed");
-    expect(homeRouteSource).not.toMatch(/input:[\s\S]*?feed:/u);
-    expect(homeRouteSource.match(/sort: (?:deps|search)\.sort \?\? "recent"/gu)).toHaveLength(2);
+    expect(homeRouteSource).toContain('deps.feed === "for-you"');
+    expect(homeRouteSource).toContain('personalized: feed === "for-you"');
+    expect(homeRouteSource).not.toContain("feed: deps.feed");
+    expect(homeRouteSource).toContain('sort: search.sort ?? "recent"');
   });
 });

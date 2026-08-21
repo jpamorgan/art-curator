@@ -64,6 +64,13 @@
       "when": 1786758407637,
       "tag": "0008_add_works_on_paper_category",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "6",
+      "when": 1787329098243,
+      "tag": "0009_early_naoko",
+      "breakpoints": true
     }
   ]
 }

@@ -4,6 +4,7 @@ import { ArrowLeft, ArrowUpRight } from "lucide-react";
 
 import { ArtGallery } from "@/components/art-gallery";
 import { ArtworkImage } from "@/components/artwork-image";
+import { ArtworkRadio } from "@/components/artwork-radio";
 import FavoriteButton from "@/components/favorite-button";
 import { loadArtworkRouteData } from "@/lib/artwork-route-data";
 
@@ -122,7 +123,13 @@ function ArtworkDetailPage() {
                 {artwork.title}
               </h1>
               <p className="text-pretty text-base text-neutral-600 sm:text-sm">
-                {artwork.artist}
+                <Link
+                  to="/artists/$slug"
+                  params={{ slug: artwork.artistSlug }}
+                  className="rounded-sm text-neutral-950 underline decoration-neutral-300 underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950"
+                >
+                  {artwork.artist}
+                </Link>
                 {artwork.date ? `, ${artwork.date}` : ""}
               </p>
             </div>
@@ -229,6 +236,8 @@ function ArtworkDetailPage() {
           </div>
         </aside>
       </div>
+
+      <ArtworkRadio artworkId={artwork.id} artworkTitle={artwork.title} />
 
       {related.length > 0 && (
         <section className="border-t border-black/10 py-10 sm:py-14" aria-labelledby="related-art">

@@ -1,5 +1,5 @@
 import { Link, useLocation, useRouterState } from "@tanstack/react-router";
-import { Bookmark, Compass, Sparkles } from "lucide-react";
+import { Bookmark } from "lucide-react";
 
 import SubmissionDialog from "@/components/submission-dialog";
 import UserMenu from "@/components/user-menu";
@@ -21,6 +21,7 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
   const isHome = location.pathname === "/";
   const isForYou = isHome && isForYouSearch(location.search);
   const isExplore = isHome && !isForYou;
+  const isFollowing = location.pathname === "/following";
 
   const tabClassName =
     "relative flex h-9 shrink-0 items-center gap-1 rounded-lg px-2 text-[13px] font-medium whitespace-nowrap transition-[background-color,color,scale] duration-150 ease-out after:absolute after:inset-x-0 after:top-1/2 after:h-10 after:-translate-y-1/2 hover:bg-neutral-100 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none sm:gap-1.5 sm:px-3.5 sm:text-sm";
@@ -38,18 +39,17 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
           >
             Art
           </Link>
-          <nav aria-label="Primary" className="flex min-w-0 items-center gap-1 sm:gap-1.5">
+          <nav
+            aria-label="Primary"
+            className="flex min-w-0 items-center gap-1 overflow-x-auto [scrollbar-width:none] sm:gap-1.5 [&::-webkit-scrollbar]:hidden"
+          >
             <Link
               to="/"
               search={{ category: undefined, style: undefined, sort: undefined, feed: undefined }}
               activeOptions={{ exact: true, includeSearch: true, explicitUndefined: true }}
               aria-current={isExplore ? "page" : undefined}
-              className={`${tabClassName} ${isExplore ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-600"}`}
+              className={`${tabClassName} ${isExplore ? "bg-neutral-100 text-neutral-950" : "text-neutral-600"}`}
             >
-              <Compass
-                aria-hidden="true"
-                className="hidden size-4 shrink-0 stroke-[1.75] min-[360px]:block"
-              />
               <span>Explore</span>
             </Link>
             <Link
@@ -57,13 +57,16 @@ export default function Header({ initialSession }: { initialSession: PublicUserS
               search={{ category: undefined, style: undefined, sort: undefined, feed: "for-you" }}
               activeOptions={{ exact: true, includeSearch: true, explicitUndefined: true }}
               aria-current={isForYou ? "page" : undefined}
-              className={`${tabClassName} ${isForYou ? "bg-neutral-950 text-white hover:bg-neutral-950 hover:text-white" : "text-neutral-600"}`}
+              className={`${tabClassName} ${isForYou ? "bg-neutral-100 text-neutral-950" : "text-neutral-600"}`}
             >
-              <Sparkles
-                aria-hidden="true"
-                className="hidden size-4 shrink-0 stroke-[1.75] min-[360px]:block"
-              />
               <span>For you</span>
+            </Link>
+            <Link
+              to="/following"
+              aria-current={isFollowing ? "page" : undefined}
+              className={`${tabClassName} ${isFollowing ? "bg-neutral-100 text-neutral-950" : "text-neutral-600"}`}
+            >
+              <span>Following</span>
             </Link>
           </nav>
         </div>

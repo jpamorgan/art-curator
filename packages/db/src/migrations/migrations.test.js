@@ -14,6 +14,7 @@ const migrationFiles = [
   "0006_nappy_marvex.sql",
   "0007_classy_ma_gnuci.sql",
   "0008_add_works_on_paper_category.sql",
+  "0009_early_naoko.sql",
 ];
 const databases = [];
 
@@ -62,6 +63,83 @@ function plan(database, sql, value) {
 }
 
 describe("historical D1 migrations", () => {
+  test("following membership yields one chronological row across multiple matching follows", async () => {
+    const database = await freshDatabase();
+    database.exec(`
+      INSERT INTO user (id, name, email, email_verified, created_at, updated_at)
+      VALUES ('following-user', 'Follower', 'follower@example.com', 1, 1, 1);
+      INSERT INTO followed_gallery (user_id, gallery_id)
+      SELECT 'following-user', gallery_id FROM artwork ORDER BY curated_at DESC LIMIT 1;
+      INSERT INTO followed_artist (user_id, artist_id)
+      SELECT 'following-user', aa.artist_id FROM artwork a
+      JOIN artwork_artist aa ON aa.artwork_id=a.id ORDER BY a.curated_at DESC LIMIT 1;
+      INSERT INTO followed_style (user_id, style_id)
+      SELECT 'following-user', ast.style_id FROM artwork a
+      JOIN artwork_style ast ON ast.artwork_id=a.id ORDER BY a.curated_at DESC LIMIT 1;
+    `);
+    const rows = database
+      .query(
+        `SELECT a.id, a.curated_at FROM artwork a
+         WHERE EXISTS (SELECT 1 FROM followed_gallery fg
+                 WHERE fg.user_id=? AND fg.gallery_id=a.gallery_id)
+            OR EXISTS (SELECT 1 FROM followed_artist fa JOIN artwork_artist aa
+                 ON aa.artist_id=fa.artist_id WHERE fa.user_id=? AND aa.artwork_id=a.id)
+            OR EXISTS (SELECT 1 FROM followed_style fs JOIN artwork_style ast
+                 ON ast.style_id=fs.style_id WHERE fs.user_id=? AND ast.artwork_id=a.id)
+         ORDER BY a.curated_at DESC, a.id DESC`,
+      )
+      .all("following-user", "following-user", "following-user");
+    expect(rows.length).toBeGreaterThan(0);
+    expect(new Set(rows.map(({ id }) => id)).size).toBe(rows.length);
+    expect(rows.map(({ curated_at }) => curated_at)).toEqual(
+      rows.map(({ curated_at }) => curated_at).sort((left, right) => right - left),
+    );
+  });
+
+  test("adds discovery data without replacing catalog rollout state", async () => {
+    const database = await freshDatabase("0008_add_works_on_paper_category.sql");
+    database.exec(`
+      INSERT INTO artwork
+      SELECT 'preexisting-work', source_id, gallery_id, 'preexisting-work', 'preexisting-work',
+        'Preexisting Work', '${"Previously Unknown Artist ".repeat(8).trim()}', date_display, description, medium,
+        dimensions, credit_line, source_url || '#preexisting', image_id, image_url, thumbnail_url,
+        image_source_url, image_attribution, image_source_version, thumbnail_source_version,
+        image_fingerprint, thumbnail_fingerprint, image_r2_key, thumbnail_r2_key, image_width,
+        image_height, alt, is_public_domain, curated_at + 1, created_at, updated_at
+      FROM artwork LIMIT 1;
+    `);
+    database.exec("UPDATE catalog_state SET version = 7 WHERE id = 1");
+    database.exec("INSERT INTO catalog_import_guard (id, valid) VALUES (1, 1)");
+
+    await applyMigration(database, "0009_early_naoko.sql");
+
+    expect(database.query("SELECT * FROM catalog_state").all()).toEqual([{ id: 1, version: 7 }]);
+    expect(database.query("SELECT * FROM catalog_import_guard").all()).toEqual([
+      { id: 1, valid: 1 },
+    ]);
+    expect(scalar(database, "SELECT count(*) FROM artist")).toBe(23);
+    expect(scalar(database, "SELECT count(*) FROM artwork_artist")).toBe(25);
+    expect(
+      database
+        .query(
+          `SELECT ar.name, ar.slug FROM artwork_artist aa
+           JOIN artist ar ON ar.id=aa.artist_id WHERE aa.artwork_id='preexisting-work'`,
+        )
+        .get(),
+    ).toEqual({
+      name: "Previously Unknown Artist ".repeat(8).trim(),
+      slug: expect.stringMatching(/^artist-legacy-[0-9]{8}$/),
+    });
+    expect(
+      scalar(
+        database,
+        `SELECT count(*) FROM artwork a
+         WHERE NOT EXISTS (SELECT 1 FROM artwork_artist aa WHERE aa.artwork_id = a.id)`,
+      ),
+    ).toBe(0);
+    expect(database.query("PRAGMA foreign_key_check").all()).toEqual([]);
+  });
+
   test("applies the complete history and retains dormant rollout tables", async () => {
     const database = await freshDatabase();
 

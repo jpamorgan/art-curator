@@ -112,19 +112,49 @@ async function taxonomy(database: ArtworkDatabase, table: "category" | "style", 
   return ids;
 }
 
+async function resolveArtist(database: ArtworkDatabase, name: string) {
+  const exact = await database
+    .prepare("SELECT id FROM artist WHERE name = ? LIMIT 1")
+    .bind(name)
+    .first<{ id: string }>();
+  if (exact) return { id: exact.id, inserts: [] as D1PreparedStatement[] };
+  const maximumSlugLength = 96 - "artist-".length;
+  const plainSlug = slugify(name, "artist").slice(0, maximumSlugLength).replace(/-$/g, "");
+  const owner = await database
+    .prepare("SELECT id FROM artist WHERE slug = ? LIMIT 1")
+    .bind(plainSlug)
+    .first<{ id: string }>();
+  const slug = owner
+    ? `${plainSlug.slice(0, maximumSlugLength - 17).replace(/-$/g, "")}-${(await sha256(name)).slice(0, 16)}`
+    : plainSlug;
+  const id = `artist-${slug}`;
+  return {
+    id,
+    inserts: [
+      prepared(database, "INSERT INTO artist (id, slug, name, description) VALUES (?, ?, ?, '')", [
+        id,
+        slug,
+        name,
+      ]),
+    ],
+  };
+}
+
 export async function resolveSharedEntities(database: ArtworkDatabase, draft: ArtworkDraft) {
   const source = await resolveSource(database, draft.source);
   const gallery = await resolveGallery(database, source.id, draft.gallery);
-  const [categoryIds, styleIds] = await Promise.all([
+  const [artist, categoryIds, styleIds] = await Promise.all([
+    resolveArtist(database, draft.artist),
     taxonomy(database, "category", draft.categorySlugs),
     taxonomy(database, "style", draft.styleSlugs),
   ]);
   return {
     sourceId: source.id,
     galleryId: gallery.id,
+    artistId: artist.id,
     categoryIds,
     styleIds,
-    inserts: [...source.inserts, ...gallery.inserts],
+    inserts: [...source.inserts, ...gallery.inserts, ...artist.inserts],
   };
 }
 

@@ -42,7 +42,9 @@ export function clearFavoriteFlags<T>(value: T): T {
   return Object.fromEntries(
     Object.entries(value).map(([key, entry]) => [
       key,
-      key === "isFavorite" && typeof entry === "boolean" ? false : clearFavoriteFlags(entry),
+      (key === "isFavorite" || key === "isFollowing") && typeof entry === "boolean"
+        ? false
+        : clearFavoriteFlags(entry),
     ]),
   ) as T;
 }
@@ -62,4 +64,8 @@ export function clearPrivateArtQueryState(
 
 export function isFavoritesPath(pathname: string) {
   return /^\/favorites\/?$/u.test(pathname);
+}
+
+export function isPrivateArtPath(pathname: string) {
+  return isFavoritesPath(pathname) || /^\/following\/?$/u.test(pathname);
 }

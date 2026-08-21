@@ -77,6 +77,8 @@ function GalleryRoute() {
     <FilteredGalleryPage
       filter="gallery"
       slug={slug}
+      entityId={gallery.id}
+      initialIsFollowing={gallery.isFollowing}
       sort={sort}
       title={gallery.name}
       subtitle={gallery.location}
