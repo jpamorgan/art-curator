@@ -62,6 +62,9 @@ describe("public agent discovery artifacts", () => {
     expect(headers).toContain(
       "/.well-known/mcp/server-card.json\n  Content-Type: application/mcp-server-card+json; charset=utf-8",
     );
+    expect(headers).toContain("/.well-known/agent-skills/browse-art/SKILL.md");
+    expect(headers).not.toContain("/.well-known/agent-skills/*");
+    expect(headers).not.toContain("/*.md");
     expect(headers).toContain("Access-Control-Expose-Headers: Content-Type, ETag");
   });
 

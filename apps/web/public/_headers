@@ -25,7 +25,7 @@
   Cache-Control: public, max-age=300
   X-Content-Type-Options: nosniff
 
-/.well-known/agent-skills/*
+/.well-known/agent-skills/browse-art/SKILL.md
   Access-Control-Allow-Origin: *
   Access-Control-Allow-Methods: GET, HEAD, OPTIONS
   Access-Control-Allow-Headers: Accept, If-None-Match
@@ -33,7 +33,11 @@
   Cache-Control: public, max-age=300
   X-Content-Type-Options: nosniff
 
-/*.md
+/index.md
+  Access-Control-Allow-Origin: *
+  X-Content-Type-Options: nosniff
+
+/auth.md
   Access-Control-Allow-Origin: *
   X-Content-Type-Options: nosniff
 
