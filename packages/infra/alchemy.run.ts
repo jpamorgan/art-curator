@@ -127,8 +127,8 @@ export const server = await Worker("server", {
       queue: enrichmentQueue,
       settings: {
         batchSize: 5,
-        maxConcurrency: 3,
-        maxRetries: 4,
+        maxConcurrency: 1,
+        maxRetries: 12,
         maxWaitTimeMs: 1_000,
         retryDelay: 30,
         deadLetterQueue: enrichmentDeadLetters,

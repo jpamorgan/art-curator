@@ -365,20 +365,20 @@ export async function handleEnrichmentQueue(
   batch: MessageBatch<EnrichmentJob>,
   dependencies: EnrichmentDependencies,
 ) {
-  await Promise.all(
-    batch.messages.map(async (message) => {
-      try {
-        await enrichArtwork(message.body.artworkId, dependencies);
-        message.ack();
-      } catch (error) {
-        console.error("Artwork enrichment failed", {
-          artworkId: message.body.artworkId,
-          error: errorSummary(error),
-        });
-        message.retry({ delaySeconds: 30 });
-      }
-    }),
-  );
+  for (const message of batch.messages) {
+    try {
+      await enrichArtwork(message.body.artworkId, dependencies);
+      message.ack();
+    } catch (error) {
+      console.error("Artwork enrichment failed", {
+        artworkId: message.body.artworkId,
+        error: errorSummary(error),
+      });
+      const attempts = Number.isInteger(message.attempts) ? message.attempts : 1;
+      const delaySeconds = Math.min(30 * 2 ** Math.min(Math.max(attempts - 1, 0), 4), 300);
+      message.retry({ delaySeconds });
+    }
+  }
 }
 
 export async function handleEnrichmentBackfillRequest(
@@ -505,9 +505,9 @@ export async function handleEnrichmentStatusRequest(
         readyCursor,
       ],
     ).all<{ id: string }>();
-    for (let offset = 0; offset < page.results.length; offset += 100) {
+    for (let offset = 0; offset < page.results.length; offset += 20) {
       const vectors = await dependencies.vectorIndex.getByIds(
-        page.results.slice(offset, offset + 100).map(({ id }) => id),
+        page.results.slice(offset, offset + 20).map(({ id }) => id),
       );
       verified += vectors.filter(
         ({ values, metadata }) =>

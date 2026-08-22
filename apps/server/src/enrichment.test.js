@@ -320,6 +320,42 @@ describe("artwork enrichment", () => {
     expect(failed.values[0]).toBe("Cloudflare embeddings failed with HTTP 429.");
   });
 
+  test("processes a queue batch sequentially to respect Vectorize write pressure", async () => {
+    const db = database(artwork({ isPublicDomain: 0 }));
+    let active = 0;
+    let maximumActive = 0;
+    let acknowledged = 0;
+    await handleEnrichmentQueue(
+      {
+        messages: ["work-1", "work-2"].map((artworkId) => ({
+          attempts: 1,
+          body: { artworkId, reason: "backfill", requestedAt: 10 },
+          ack: () => (acknowledged += 1),
+          retry: () => {
+            throw new Error("must not retry");
+          },
+        })),
+      },
+      {
+        database: db.value,
+        bucket: { get: async () => null },
+        provider: provider({
+          embedText: async () => {
+            active += 1;
+            maximumActive = Math.max(maximumActive, active);
+            await new Promise((resolve) => setTimeout(resolve, 5));
+            active -= 1;
+            return embedding;
+          },
+        }),
+        vectorIndex: { upsert: async () => ({ ids: ["work-1"], count: 1 }) },
+        now: () => 450,
+      },
+    );
+    expect(acknowledged).toBe(2);
+    expect(maximumActive).toBe(1);
+  });
+
   test("rejects oversized OpenAI responses before buffering their body", async () => {
     const openAiConfig = resolveEnrichmentModelConfig({ ENRICHMENT_PROVIDER: "openai" });
     const openAiProvider = createEnrichmentProvider({
@@ -341,7 +377,7 @@ describe("artwork enrichment", () => {
         async run(model, input) {
           calls.push({ model, input });
           return model === config.visionModel
-            ? { choices: [{ message: { content: JSON.stringify(facets) } }] }
+            ? { response: `Here is the result:\n\`\`\`json\n${JSON.stringify(facets)}\n\`\`\`` }
             : { data: [embedding] };
         },
       },
@@ -460,6 +496,8 @@ describe("artwork enrichment", () => {
   });
 
   test("reports readiness only for vectors in the active provider generation", async () => {
+    const ids = Array.from({ length: 21 }, (_, index) => `work-${index + 1}`);
+    const lookupSizes = [];
     const response = await handleEnrichmentStatusRequest(
       new Request("https://api.example.com/internal/enrichment/status", {
         headers: { Authorization: `Bearer ${SECRET}` },
@@ -474,10 +512,10 @@ describe("artwork enrichment", () => {
                 return {
                   async first() {
                     expect(sql).toContain("provider=?");
-                    return { total: 2, ready: 2, failed: 0, pending: 0, missing: 0 };
+                    return { total: 21, ready: 21, failed: 0, pending: 0, missing: 0 };
                   },
                   async all() {
-                    return { results: [{ id: "work-1" }, { id: "work-2" }] };
+                    return { results: ids.map((id) => ({ id })) };
                   },
                 };
               },
@@ -485,29 +523,29 @@ describe("artwork enrichment", () => {
           },
         },
         vectorIndex: {
-          getByIds: async () => [
-            {
-              id: "work-1",
+          getByIds: async (requestedIds) => {
+            lookupSizes.push(requestedIds.length);
+            if (requestedIds.length > 20) throw new Error("Vectorize accepts at most 20 IDs");
+            return requestedIds.map((id) => ({
+              id,
               values: embedding,
-              metadata: { embeddingGeneration: config.vectorGeneration },
-            },
-            {
-              id: "work-2",
-              values: embedding,
-              metadata: { embeddingGeneration: "eg-stale" },
-            },
-          ],
+              metadata: {
+                embeddingGeneration: id === "work-21" ? "eg-stale" : config.vectorGeneration,
+              },
+            }));
+          },
         },
       },
     );
     expect(response.status).toBe(200);
+    expect(lookupSizes).toEqual([20, 1]);
     expect(await response.json()).toEqual({
-      total: 2,
-      ready: 2,
+      total: 21,
+      ready: 21,
       failed: 0,
       pending: 0,
       missing: 0,
-      verified: 1,
+      verified: 20,
       provider: "cloudflare",
       vectorGeneration: config.vectorGeneration,
     });

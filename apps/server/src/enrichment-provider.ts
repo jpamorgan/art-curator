@@ -115,10 +115,20 @@ function validateEmbedding(value: unknown, config: EnrichmentModelConfig) {
 function parseFacets(value: unknown, provider: string) {
   let candidate = value;
   if (typeof candidate === "string") {
+    const trimmed = candidate.trim();
+    const fenced = /^```(?:json)?\s*([\s\S]*?)\s*```$/i.exec(trimmed)?.[1];
+    const jsonText = fenced ?? trimmed;
     try {
-      candidate = JSON.parse(candidate);
+      candidate = JSON.parse(jsonText);
     } catch {
-      throw new Error(`${provider} returned invalid artwork facet JSON.`);
+      const start = jsonText.indexOf("{");
+      const end = jsonText.lastIndexOf("}");
+      try {
+        if (start < 0 || end <= start) throw new Error("missing JSON object");
+        candidate = JSON.parse(jsonText.slice(start, end + 1));
+      } catch {
+        throw new Error(`${provider} returned invalid artwork facet JSON.`);
+      }
     }
   }
   const parsed = visualFacetsSchema.safeParse(candidate);
