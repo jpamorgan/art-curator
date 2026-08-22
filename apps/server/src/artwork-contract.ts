@@ -1,6 +1,8 @@
 import { canonicalArtifactSourceUrl } from "@art/db/artifacts";
 import { z } from "zod";
 
+import type { EnrichmentModelConfig } from "./enrichment-provider";
+
 export type ArtworkDatabase = Pick<D1Database, "batch" | "prepare">;
 export type ArtworkBucket = Pick<R2Bucket, "put">;
 export type ArtworkWriteDependencies = {
@@ -20,9 +22,7 @@ export type ArtworkWriteDependencies = {
     }>,
     "send"
   >;
-  embeddingModel?: string;
-  promptVersion?: string;
-  visionModel?: string;
+  enrichmentConfig: EnrichmentModelConfig;
 };
 
 export class ArtworkRequestError extends Error {

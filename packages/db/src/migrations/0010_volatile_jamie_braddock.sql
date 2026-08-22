@@ -1,0 +1,1 @@
+ALTER TABLE `taste_profile` ADD `embedding_generation` text;

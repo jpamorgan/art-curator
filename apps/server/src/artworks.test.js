@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { Database } from "bun:sqlite";
 
 import { ARTIFACT_CONTENT_TYPE } from "@art/db/artifacts";
+import { resolveEnrichmentModelConfig } from "@art/env/enrichment";
 
 import { artworkDraftSchema } from "./artwork-contract";
 import { derivedId } from "./artwork-entities";
@@ -13,6 +14,7 @@ import {
 import { handleArtworkWriteRequest } from "./artworks";
 
 const SECRET = "art_import_test_secret_0123456789_ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+const enrichmentConfig = resolveEnrichmentModelConfig({});
 const migrationFiles = [
   "0000_good_kabuki.sql",
   "0001_seed_curated_artworks.sql",
@@ -24,6 +26,7 @@ const migrationFiles = [
   "0007_classy_ma_gnuci.sql",
   "0008_add_works_on_paper_category.sql",
   "0009_early_naoko.sql",
+  "0010_volatile_jamie_braddock.sql",
 ];
 let sqlite;
 
@@ -200,6 +203,7 @@ function dependencies(bucket, fetcher, database = d1(sqlite), now = 1_800_000_00
   return {
     bucket: bucket.value,
     database,
+    enrichmentConfig,
     fetcher,
     now: () => now,
     secret: SECRET,

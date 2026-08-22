@@ -3,6 +3,7 @@
 // Keep runtime binding types independent from infrastructure implementation imports. This avoids
 // a package cycle while Alchemy still validates the concrete bindings at the deployment boundary.
 export interface CloudflareEnv {
+  AI: Ai;
   DB: D1Database;
   ARTWORKS: R2Bucket;
   ARTWORK_VECTORS: VectorizeIndex;
@@ -13,9 +14,10 @@ export interface CloudflareEnv {
   }>;
   RECOMMENDATION_ANALYTICS: AnalyticsEngineDataset;
   ART_IMPORT_SECRET: string;
-  OPENAI_API_KEY: string;
-  OPENAI_VISION_MODEL: string;
-  OPENAI_EMBEDDING_MODEL: string;
+  OPENAI_API_KEY?: string;
+  ENRICHMENT_PROVIDER: "cloudflare" | "openai";
+  ENRICHMENT_VISION_MODEL: string;
+  ENRICHMENT_EMBEDDING_MODEL: string;
   ENRICHMENT_PROMPT_VERSION: string;
   BETTER_AUTH_SECRET: string;
   BETTER_AUTH_URL: string;

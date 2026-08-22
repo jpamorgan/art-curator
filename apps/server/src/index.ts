@@ -3,6 +3,7 @@ import { appRouter } from "@art/api/routers/index";
 import { createAuth } from "@art/auth";
 import { authSecurityOptions } from "@art/auth/security-options";
 import { createDb } from "@art/db";
+import { resolveEnrichmentModelConfig } from "@art/env/enrichment";
 import { env } from "@art/env/server";
 import { OpenAPIHandler } from "@orpc/openapi/fetch";
 import { OpenAPIReferencePlugin } from "@orpc/openapi/plugins";
@@ -18,10 +19,12 @@ import { handleCatalogArtworkSearchRequest } from "./catalog";
 import { handleArtworkWriteRequest } from "./artworks";
 import {
   handleEnrichmentBackfillRequest,
+  handleEnrichmentIndexReadinessRequest,
   handleEnrichmentQueue,
   handleEnrichmentStatusRequest,
   type EnrichmentJob,
 } from "./enrichment";
+import { createEnrichmentProvider } from "./enrichment-provider";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
 import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 import {
@@ -31,6 +34,17 @@ import {
 } from "./submissions";
 
 const app = new Hono();
+const enrichmentConfig = resolveEnrichmentModelConfig({
+  ENRICHMENT_PROVIDER: env.ENRICHMENT_PROVIDER,
+  ENRICHMENT_VISION_MODEL: env.ENRICHMENT_VISION_MODEL,
+  ENRICHMENT_EMBEDDING_MODEL: env.ENRICHMENT_EMBEDDING_MODEL,
+  ENRICHMENT_PROMPT_VERSION: env.ENRICHMENT_PROMPT_VERSION,
+});
+const enrichmentProvider = createEnrichmentProvider({
+  config: enrichmentConfig,
+  workersAi: env.AI,
+  openAiApiKey: env.OPENAI_API_KEY,
+});
 
 app.use(logger());
 app.use(
@@ -63,26 +77,30 @@ app.post("/internal/artworks", (c) =>
   handleArtworkWriteRequest(c.req.raw, {
     bucket: env.ARTWORKS,
     database: env.DB,
-    embeddingModel: env.OPENAI_EMBEDDING_MODEL,
+    enrichmentConfig,
     enrichmentQueue: env.ENRICHMENT_QUEUE,
-    promptVersion: env.ENRICHMENT_PROMPT_VERSION,
     secret: env.ART_IMPORT_SECRET,
-    visionModel: env.OPENAI_VISION_MODEL,
   }),
 );
 app.post("/internal/enrichment/backfill", (c) =>
   handleEnrichmentBackfillRequest(c.req.raw, {
+    config: enrichmentConfig,
     database: env.DB,
-    embeddingModel: env.OPENAI_EMBEDDING_MODEL,
-    promptVersion: env.ENRICHMENT_PROMPT_VERSION,
     queue: env.ENRICHMENT_QUEUE,
     secret: env.ART_IMPORT_SECRET,
-    visionModel: env.OPENAI_VISION_MODEL,
   }),
 );
 app.get("/internal/enrichment/status", (c) =>
   handleEnrichmentStatusRequest(c.req.raw, {
+    config: enrichmentConfig,
     database: env.DB,
+    secret: env.ART_IMPORT_SECRET,
+    vectorIndex: env.ARTWORK_VECTORS,
+  }),
+);
+app.get("/internal/enrichment/index-ready", (c) =>
+  handleEnrichmentIndexReadinessRequest(c.req.raw, {
+    config: enrichmentConfig,
     secret: env.ART_IMPORT_SECRET,
     vectorIndex: env.ARTWORK_VECTORS,
   }),
@@ -189,11 +207,8 @@ export default {
       analytics: env.RECOMMENDATION_ANALYTICS,
       bucket: env.ARTWORKS,
       database: env.DB,
-      embeddingModel: env.OPENAI_EMBEDDING_MODEL,
-      openAiApiKey: env.OPENAI_API_KEY,
-      promptVersion: env.ENRICHMENT_PROMPT_VERSION,
+      provider: enrichmentProvider,
       vectorIndex: env.ARTWORK_VECTORS,
-      visionModel: env.OPENAI_VISION_MODEL,
     });
   },
 };

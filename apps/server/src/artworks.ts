@@ -206,11 +206,9 @@ export async function handleArtworkWriteRequest(
         result.outcome === "created" ? "import" : "update",
         dependencies.now?.() ?? Date.now(),
         {
+          config: dependencies.enrichmentConfig,
           database: dependencies.database,
-          embeddingModel: dependencies.embeddingModel,
-          promptVersion: dependencies.promptVersion,
           sourceMode: parsed.data.isPublicDomain ? "image" : "metadata",
-          visionModel: dependencies.visionModel,
         },
       );
     return Response.json(result);

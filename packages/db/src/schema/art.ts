@@ -330,6 +330,7 @@ export const tasteProfile = sqliteTable(
     revision: integer("revision").default(0).notNull(),
     embedding: text("embedding"),
     embeddingDimensions: integer("embedding_dimensions").default(512).notNull(),
+    embeddingGeneration: text("embedding_generation"),
     artworkCount: integer("artwork_count").default(0).notNull(),
     updatedAt: timestamp("updated_at").$onUpdate(() => /* @__PURE__ */ new Date()),
   },

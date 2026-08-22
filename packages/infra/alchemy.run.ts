@@ -1,5 +1,7 @@
 import alchemy from "alchemy";
+import { ENRICHMENT_EMBEDDING_DIMENSIONS, resolveEnrichmentModelConfig } from "@art/env/enrichment";
 import {
+  Ai,
   AnalyticsEngineDataset,
   D1Database,
   Queue,
@@ -24,13 +26,14 @@ const app = await alchemy("art");
 
 const webOrigin = app.local ? "http://localhost:3001" : "https://art.jpamorgan.com";
 const apiOrigin = app.local ? "http://localhost:3000" : "https://api.art.jpamorgan.com";
+const enrichmentConfig = resolveEnrichmentModelConfig(process.env);
 
 const db = await D1Database("database", {
   migrationsDir: "../../packages/db/src/migrations",
 });
 const artworkBucket = await R2Bucket(ARTWORK_BUCKET_RESOURCE_ID, artworkBucketProps(app.stage));
-const artworkVectors = await VectorizeIndex("artwork-vectors", {
-  dimensions: 512,
+const artworkVectors = await VectorizeIndex("artwork-vectors-768", {
+  dimensions: ENRICHMENT_EMBEDDING_DIMENSIONS,
   metric: "cosine",
 });
 await Promise.all(
@@ -39,9 +42,10 @@ await Promise.all(
       ["galleryId", "string"],
       ["artistId", "string"],
       ["isPublicDomain", "boolean"],
+      ["embeddingGeneration", "string"],
     ] as const
   ).map(([propertyName, indexType]) =>
-    VectorizeMetadataIndex(`artwork-vectors-${propertyName}`, {
+    VectorizeMetadataIndex(`artwork-vectors-768-${propertyName}`, {
       index: artworkVectors,
       propertyName,
       indexType,
@@ -62,6 +66,24 @@ const enrichmentQueue = await Queue<{
 const recommendationAnalytics = AnalyticsEngineDataset("recommendation-analytics", {
   dataset: `art_recommendations_${app.stage.replace(/[^a-zA-Z0-9_]/g, "_")}`,
 });
+const serverBindings = {
+  AI: Ai(),
+  DB: db,
+  ARTWORKS: artworkBucket,
+  ARTWORK_VECTORS: artworkVectors,
+  ENRICHMENT_QUEUE: enrichmentQueue,
+  RECOMMENDATION_ANALYTICS: recommendationAnalytics,
+  ART_IMPORT_SECRET: alchemy.secret.env.ART_IMPORT_SECRET!,
+  ENRICHMENT_PROVIDER: enrichmentConfig.provider,
+  ENRICHMENT_VISION_MODEL: enrichmentConfig.visionModel,
+  ENRICHMENT_EMBEDDING_MODEL: enrichmentConfig.embeddingModel,
+  ENRICHMENT_PROMPT_VERSION: enrichmentConfig.promptVersion,
+  CORS_ORIGIN: webOrigin,
+  BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
+  BETTER_AUTH_URL: apiOrigin,
+};
+if (enrichmentConfig.provider === "openai")
+  Object.assign(serverBindings, { OPENAI_API_KEY: alchemy.secret.env.OPENAI_API_KEY! });
 
 async function readDeploymentJson<T>(response: Response): Promise<T> {
   if (!(response.headers.get("content-type") ?? "").toLowerCase().startsWith("application/json"))
@@ -99,21 +121,7 @@ export const server = await Worker("server", {
   compatibility: "node",
   url: true,
   domains: app.local ? undefined : ["api.art.jpamorgan.com"],
-  bindings: {
-    DB: db,
-    ARTWORKS: artworkBucket,
-    ARTWORK_VECTORS: artworkVectors,
-    ENRICHMENT_QUEUE: enrichmentQueue,
-    RECOMMENDATION_ANALYTICS: recommendationAnalytics,
-    ART_IMPORT_SECRET: alchemy.secret.env.ART_IMPORT_SECRET!,
-    OPENAI_API_KEY: alchemy.secret.env.OPENAI_API_KEY!,
-    OPENAI_VISION_MODEL: process.env.OPENAI_VISION_MODEL ?? "gpt-5.4-mini-2026-03-17",
-    OPENAI_EMBEDDING_MODEL: process.env.OPENAI_EMBEDDING_MODEL ?? "text-embedding-3-small",
-    ENRICHMENT_PROMPT_VERSION: process.env.ENRICHMENT_PROMPT_VERSION ?? "artwork-facets-v1",
-    CORS_ORIGIN: webOrigin,
-    BETTER_AUTH_SECRET: alchemy.secret.env.BETTER_AUTH_SECRET!,
-    BETTER_AUTH_URL: apiOrigin,
-  },
+  bindings: serverBindings,
   eventSources: [
     {
       queue: enrichmentQueue,
@@ -219,6 +227,35 @@ async function queueEnrichmentBackfill(serverUrl: string, secret: string) {
   return queued;
 }
 
+async function waitForVectorMetadataIndexes(serverUrl: string, secret: string) {
+  const deadline = Date.now() + 2 * 60_000;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(new URL("/internal/enrichment/index-ready", serverUrl), {
+        headers: { Authorization: `Bearer ${secret}` },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (response.ok) {
+        const status = await readDeploymentJson<{
+          ready: boolean;
+          provider: string;
+          vectorGeneration: string;
+        }>(response);
+        if (
+          status.ready === true &&
+          status.provider === enrichmentConfig.provider &&
+          status.vectorGeneration === enrichmentConfig.vectorGeneration
+        )
+          return;
+      }
+    } catch {
+      // The new Worker or metadata index can be briefly unavailable after creation.
+    }
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+  throw new Error("The Vectorize metadata indexes did not become ready.");
+}
+
 async function waitForEnrichmentReadiness(serverUrl: string, secret: string) {
   const deadline = Date.now() + 12 * 60_000;
   let lastStatus = "unavailable";
@@ -237,6 +274,8 @@ async function waitForEnrichmentReadiness(serverUrl: string, secret: string) {
           pending: number;
           missing: number;
           verified: number;
+          provider: string;
+          vectorGeneration: string;
         }>(response);
         const values = [
           status.total,
@@ -246,7 +285,11 @@ async function waitForEnrichmentReadiness(serverUrl: string, secret: string) {
           status.missing,
           status.verified,
         ];
-        if (values.every((value) => Number.isInteger(value) && value >= 0)) {
+        if (
+          values.every((value) => Number.isInteger(value) && value >= 0) &&
+          status.provider === enrichmentConfig.provider &&
+          status.vectorGeneration === enrichmentConfig.vectorGeneration
+        ) {
           lastStatus = `${status.ready}/${status.total} ready, ${status.verified} vectors verified, ${status.pending} pending, ${status.failed} failed, ${status.missing} missing`;
           if (
             status.ready === status.total &&
@@ -283,8 +326,11 @@ if (app.phase === "up") {
     `Artifacts -> ${artworkBucketName(app.stage)} (${result.uploaded} uploaded, ${result.skipped} unchanged)`,
   );
   if (!app.local) {
+    await waitForVectorMetadataIndexes(server.url, importSecret);
     const queued = await queueEnrichmentBackfill(server.url, importSecret);
-    console.log(`Enrichment -> ${artworkVectors.name} (${queued} queued)`);
+    console.log(
+      `Enrichment -> ${artworkVectors.name} (${enrichmentConfig.provider}, ${enrichmentConfig.vectorGeneration}, ${queued} queued)`,
+    );
     await waitForEnrichmentReadiness(server.url, importSecret);
   }
 }

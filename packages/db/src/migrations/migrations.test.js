@@ -15,6 +15,7 @@ const migrationFiles = [
   "0007_classy_ma_gnuci.sql",
   "0008_add_works_on_paper_category.sql",
   "0009_early_naoko.sql",
+  "0010_volatile_jamie_braddock.sql",
 ];
 const databases = [];
 
@@ -63,6 +64,33 @@ function plan(database, sql, value) {
 }
 
 describe("historical D1 migrations", () => {
+  test("adds embedding generations without invalidating existing taste profiles", async () => {
+    const database = await freshDatabase("0009_early_naoko.sql");
+    database.exec(`
+      INSERT INTO user (id, name, email, email_verified, created_at, updated_at)
+      VALUES ('taste-user', 'Taste', 'taste@example.com', 1, 1, 1);
+      INSERT INTO taste_profile
+        (user_id, revision, embedding, embedding_dimensions, artwork_count, updated_at)
+      VALUES ('taste-user', 2, '[0.5,0.5]', 2, 2, 1);
+    `);
+
+    await applyMigration(database, "0010_volatile_jamie_braddock.sql");
+
+    expect(
+      database
+        .query(
+          `SELECT revision, embedding, embedding_dimensions, embedding_generation
+           FROM taste_profile WHERE user_id='taste-user'`,
+        )
+        .get(),
+    ).toEqual({
+      revision: 2,
+      embedding: "[0.5,0.5]",
+      embedding_dimensions: 2,
+      embedding_generation: null,
+    });
+  });
+
   test("following membership yields one chronological row across multiple matching follows", async () => {
     const database = await freshDatabase();
     database.exec(`

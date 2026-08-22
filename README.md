@@ -10,7 +10,7 @@ A minimal web app for discovering and saving physical art, styles, and galleries
 - Hono and oRPC
 - Better Auth
 - Drizzle and Cloudflare D1
-- OpenAI vision and text embeddings
+- Cloudflare Workers AI by default, with an interchangeable OpenAI adapter
 - Cloudflare Vectorize, Queues, and Analytics Engine
 - Private Cloudflare R2 image storage
 - Tailwind CSS
@@ -26,7 +26,7 @@ bun run dev
 
 The web app runs at `http://localhost:3001` and the API runs at `http://localhost:3000`.
 
-Local development serves recommendations from the deterministic D1 fallback. OpenAI
+Local development serves recommendations from the deterministic D1 fallback. Model
 enrichment, Vectorize backfill, and the production readiness gate run during remote
 deployments.
 
@@ -76,11 +76,18 @@ an explicit dismissal decision.
   discovery presets.
 
 Artwork metadata and permission-eligible images are analyzed into structured visual and
-semantic facets. Canonical facet text is embedded at 512 dimensions and stored in
+semantic facets. Canonical facet text is embedded at 768 dimensions and stored in
 Cloudflare Vectorize; images remain in private R2 and are not themselves stored in the
 vector index. Metadata-only enrichment is used when image-analysis permission is absent.
-OpenAI calls happen asynchronously through a Cloudflare Queue, never in page-serving
+Model calls happen asynchronously through a Cloudflare Queue, never in page-serving
 requests. Ranking falls back to deterministic D1 signals when Vectorize is unavailable.
+
+Cloudflare Workers AI is the default provider (`@cf/google/gemma-4-26b-a4b-it` for
+vision and `@cf/baai/bge-base-en-v1.5` for text embeddings), so it requires no external
+model API key. Set `ENRICHMENT_PROVIDER=openai` and `OPENAI_API_KEY` to use the OpenAI
+adapter instead. Provider, model, prompt, or dimension changes create a new embedding
+generation; recommendation queries ignore older generations while the idempotent
+backfill rebuilds the catalog.
 
 Recommendation impressions and opens are recorded with opaque recommendation tokens.
 Saved works and follows are positive signals; **Not for me** supplies explicit negative
@@ -95,5 +102,6 @@ bun run deploy
 Production uses `art.jpamorgan.com` for the web app and `api.art.jpamorgan.com` for the API.
 Deploys apply D1 migrations, idempotently sync the curated R2 seed, enqueue enrichment,
 and verify every ready D1 enrichment row exists in Vectorize before publishing the web
-Worker. Production requires `OPENAI_API_KEY`; model names and the enrichment prompt
-version can be overridden with the variables shown in `apps/server/.env.example`.
+Worker. The default Cloudflare provider uses the Worker AI binding. Provider, model names,
+and the enrichment prompt version can be overridden with the variables shown in
+`apps/server/.env.example`; only the OpenAI provider requires `OPENAI_API_KEY`.

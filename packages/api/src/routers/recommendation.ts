@@ -191,6 +191,7 @@ async function refreshTasteProfile(
   favoriteIds: string[],
   revision: number,
   embedding: number[],
+  embeddingGeneration: string,
 ) {
   await db
     .insert(tasteProfile)
@@ -199,6 +200,7 @@ async function refreshTasteProfile(
       revision,
       embedding: JSON.stringify(embedding),
       embeddingDimensions: embedding.length,
+      embeddingGeneration,
       artworkCount: favoriteIds.length,
     })
     .onConflictDoUpdate({
@@ -207,6 +209,7 @@ async function refreshTasteProfile(
         revision,
         embedding: JSON.stringify(embedding),
         embeddingDimensions: embedding.length,
+        embeddingGeneration,
         artworkCount: favoriteIds.length,
         updatedAt: new Date(),
       },
@@ -339,6 +342,7 @@ export const recommendationsRouter = {
           : undefined,
         catalogSnapshot,
         enrichmentSnapshot,
+        vectorGeneration: context.recommendationVectorGeneration,
         day,
         ranker: RANKER_VERSION,
       });
@@ -406,7 +410,11 @@ export const recommendationsRouter = {
       if (context.recommendationIndex) {
         try {
           if (anchorIds.length) {
-            if (!input.seedArtworkId && profile?.embedding) {
+            if (
+              !input.seedArtworkId &&
+              profile?.embedding &&
+              profile.embeddingGeneration === context.recommendationVectorGeneration
+            ) {
               try {
                 anchorVector = z.array(z.number()).parse(JSON.parse(profile.embedding));
               } catch {
@@ -415,13 +423,28 @@ export const recommendationsRouter = {
             }
             if (!anchorVector) {
               const vectors = await context.recommendationIndex.getByIds(anchorIds);
-              anchorVector = average(vectors.map((item) => item.values));
+              anchorVector = average(
+                vectors
+                  .filter(
+                    (item) =>
+                      item.metadata?.embeddingGeneration === context.recommendationVectorGeneration,
+                  )
+                  .map((item) => item.values),
+              );
               if (anchorVector && userId && !input.seedArtworkId)
-                await refreshTasteProfile(context.db, userId, favoriteIds, revision, anchorVector);
+                await refreshTasteProfile(
+                  context.db,
+                  userId,
+                  favoriteIds,
+                  revision,
+                  anchorVector,
+                  context.recommendationVectorGeneration,
+                );
             }
             if (anchorVector) {
               const result = await context.recommendationIndex.query(anchorVector, {
                 topK: Math.min(100, Math.max(20, candidates.length)),
+                filter: { embeddingGeneration: context.recommendationVectorGeneration },
                 returnMetadata: "none",
               });
               for (const match of result.matches) vectorScores.set(match.id, match.score);
@@ -429,10 +452,18 @@ export const recommendationsRouter = {
           }
           if (personalized && hiddenIds.length) {
             const hiddenVectors = await context.recommendationIndex.getByIds(hiddenIds);
-            const negativeVector = average(hiddenVectors.map((item) => item.values));
+            const negativeVector = average(
+              hiddenVectors
+                .filter(
+                  (item) =>
+                    item.metadata?.embeddingGeneration === context.recommendationVectorGeneration,
+                )
+                .map((item) => item.values),
+            );
             if (negativeVector) {
               const result = await context.recommendationIndex.query(negativeVector, {
                 topK: Math.min(100, Math.max(20, candidates.length)),
+                filter: { embeddingGeneration: context.recommendationVectorGeneration },
                 returnMetadata: "none",
               });
               for (const match of result.matches) negativeVectorScores.set(match.id, match.score);

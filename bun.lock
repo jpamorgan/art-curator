@@ -161,6 +161,7 @@
       "name": "@art/infra",
       "dependencies": {
         "@art/db": "workspace:*",
+        "@art/env": "workspace:*",
         "dotenv": "catalog:",
         "zod": "catalog:",
       },
