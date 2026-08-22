@@ -24,6 +24,8 @@ For direct browsing, start at https://art.jpamorgan.com/. Public pages render me
 - https://art.jpamorgan.com/galleries
 - https://art.jpamorgan.com/styles
 
-For structured access, connect an MCP client to https://api.art.jpamorgan.com/mcp and call the read-only `browse_art` tool. It accepts an optional `limit` from 1 to 12, `sort` (`recent`, `title`, or `artist`), and `category`, `style`, `gallery`, or `artist` filters. The result contains concise artwork cards with canonical https://art.jpamorgan.com/art/ URLs and may include an interactive MCP Apps view.
+For structured access, connect an MCP client to the [Streamable HTTP MCP endpoint](https://api.art.jpamorgan.com/mcp) and call the read-only `browse_art` tool. It accepts an optional `limit` from 1 to 12, `sort` (`recent`, `title`, or `artist`), and `category`, `style`, `gallery`, or `artist` filters. The result contains concise artwork cards with canonical https://art.jpamorgan.com/art/ URLs and may include an interactive MCP Apps view.
+
+MCP discovery metadata is available in the [MCP server card](https://art.jpamorgan.com/.well-known/mcp/server-card.json).
 
 Prefer the MCP tool when selecting or comparing catalog entries. Use the public website when a person needs to inspect an artwork page or interact with personal saved and recommendation feeds.

@@ -8,6 +8,14 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { z } from "zod";
 
 export const ART_WIDGET_URI = "ui://art-curator/browse-art/v1.html";
+export const ART_MCP_ENDPOINT = "https://api.art.jpamorgan.com/mcp";
+export const ART_MCP_TRANSPORT = "streamable-http";
+export const ART_MCP_SERVER_VERSION = "1.0.0";
+export const BROWSE_ART_TOOL_NAME = "browse_art";
+export const BROWSE_ART_DESCRIPTION =
+  "Use this when someone wants to discover, browse, compare, or discuss curated physical artworks in the public Art by John Philip Morgan catalog.";
+export const ART_MCP_INSTRUCTIONS =
+  "Use browse_art for public art discovery. It requires no authentication and never changes catalog or user data.";
 
 const WIDGET_DESCRIPTION =
   "A compact Art by John Philip Morgan gallery with artist, date, gallery, style, and canonical artwork links.";
@@ -439,10 +447,9 @@ export function createArtMcpServer(dependencies: McpDependencies): McpServer {
     "openai/widgetDescription": WIDGET_DESCRIPTION,
   };
   const server = new McpServer(
-    { name: "art-by-john-philip-morgan", version: "1.0.0" },
+    { name: "art-by-john-philip-morgan", version: ART_MCP_SERVER_VERSION },
     {
-      instructions:
-        "Use browse_art for public art discovery. It requires no authentication and never changes catalog or user data.",
+      instructions: ART_MCP_INSTRUCTIONS,
     },
   );
 
@@ -469,11 +476,10 @@ export function createArtMcpServer(dependencies: McpDependencies): McpServer {
 
   registerAppTool(
     server,
-    "browse_art",
+    BROWSE_ART_TOOL_NAME,
     {
       title: "Browse curated art",
-      description:
-        "Use this when someone wants to discover, browse, compare, or discuss curated physical artworks in the public Art by John Philip Morgan catalog.",
+      description: BROWSE_ART_DESCRIPTION,
       inputSchema: browseArtInputSchema,
       outputSchema: browseArtOutputSchema,
       annotations: {

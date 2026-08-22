@@ -1,0 +1,25 @@
+{
+  "name": "Art by John Philip Morgan",
+  "version": "1.0.0",
+  "kind": "product",
+  "description": "A personal catalog for discovering and saving physical art, artists, galleries, and styles curated by John Philip Morgan.",
+  "serverUrl": "https://api.art.jpamorgan.com/mcp",
+  "transport": "streamable-http",
+  "instructions": "Use browse_art for public art discovery. It requires no authentication and never changes catalog or user data.",
+  "capabilities": {
+    "tools": true,
+    "resources": true
+  },
+  "tools": [
+    {
+      "name": "browse_art",
+      "description": "Use this when someone wants to discover, browse, compare, or discuss curated physical artworks in the public Art by John Philip Morgan catalog.",
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ]
+}
