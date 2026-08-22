@@ -29,6 +29,22 @@ export function recommendationSignature(value: unknown) {
   return String(stableRecommendationHash(JSON.stringify(value)));
 }
 
+export const RECOMMENDATION_D1_ID_CHUNK_SIZE = 80;
+export const RECOMMENDATION_VECTOR_ID_CHUNK_SIZE = 20;
+
+export async function collectInChunks<Input, Output>(
+  values: readonly Input[],
+  chunkSize: number,
+  load: (chunk: Input[]) => Promise<readonly Output[]>,
+) {
+  if (!Number.isInteger(chunkSize) || chunkSize < 1)
+    throw new Error("Chunk size must be positive.");
+  const result: Output[] = [];
+  for (let offset = 0; offset < values.length; offset += chunkSize)
+    result.push(...(await load(values.slice(offset, offset + chunkSize))));
+  return result;
+}
+
 export function freshnessScore(curatedAt: Date, now: number) {
   const ageDays = Math.max(0, (now - curatedAt.getTime()) / 86_400_000);
   return Math.max(0, 1 - ageDays / 365);

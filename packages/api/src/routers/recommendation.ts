@@ -16,28 +16,18 @@ import {
   style,
   tasteProfile,
 } from "@art/db/schema/art";
-import {
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  exists,
-  inArray,
-  lt,
-  notInArray,
-  or,
-  sql,
-  type SQL,
-} from "@art/db/query";
+import { and, asc, count, desc, eq, exists, inArray, lt, or, sql, type SQL } from "@art/db/query";
 import { ORPCError } from "@orpc/server";
 import { z } from "zod";
 
 import { artworkPageSchema, favoritesListInputSchema } from "../art-contract";
 import {
+  collectInChunks,
   effectivePersonalization,
   diversifyStable,
   freshnessScore,
+  RECOMMENDATION_D1_ID_CHUNK_SIZE,
+  RECOMMENDATION_VECTOR_ID_CHUNK_SIZE,
   recommendationAnchorIds,
   recommendationSignalUserId,
   recommendationSignature,
@@ -109,7 +99,7 @@ function overlap(left: Set<string>, right: Set<string>) {
 }
 
 async function loadFacets(db: Database, rows: ArtworkRow[]): Promise<Map<string, Facets>> {
-  const ids = rows.map((row) => row.id);
+  const ids = [...new Set(rows.map((row) => row.id))];
   const result = new Map(
     rows.map((row) => [
       row.id,
@@ -124,23 +114,45 @@ async function loadFacets(db: Database, rows: ArtworkRow[]): Promise<Map<string,
   );
   if (!ids.length) return result;
   const [artists, categories, styles] = await Promise.all([
-    db
-      .select({ artworkId: artworkArtist.artworkId, id: artworkArtist.artistId })
-      .from(artworkArtist)
-      .where(inArray(artworkArtist.artworkId, ids)),
-    db
-      .select({ artworkId: artworkCategory.artworkId, id: artworkCategory.categoryId })
-      .from(artworkCategory)
-      .where(inArray(artworkCategory.artworkId, ids)),
-    db
-      .select({ artworkId: artworkStyle.artworkId, id: artworkStyle.styleId })
-      .from(artworkStyle)
-      .where(inArray(artworkStyle.artworkId, ids)),
+    collectInChunks(ids, RECOMMENDATION_D1_ID_CHUNK_SIZE, async (chunk) =>
+      db
+        .select({ artworkId: artworkArtist.artworkId, id: artworkArtist.artistId })
+        .from(artworkArtist)
+        .where(inArray(artworkArtist.artworkId, chunk)),
+    ),
+    collectInChunks(ids, RECOMMENDATION_D1_ID_CHUNK_SIZE, async (chunk) =>
+      db
+        .select({ artworkId: artworkCategory.artworkId, id: artworkCategory.categoryId })
+        .from(artworkCategory)
+        .where(inArray(artworkCategory.artworkId, chunk)),
+    ),
+    collectInChunks(ids, RECOMMENDATION_D1_ID_CHUNK_SIZE, async (chunk) =>
+      db
+        .select({ artworkId: artworkStyle.artworkId, id: artworkStyle.styleId })
+        .from(artworkStyle)
+        .where(inArray(artworkStyle.artworkId, chunk)),
+    ),
   ]);
   for (const item of artists) result.get(item.artworkId)?.artists.add(item.id);
   for (const item of categories) result.get(item.artworkId)?.categories.add(item.id);
   for (const item of styles) result.get(item.artworkId)?.styles.add(item.id);
   return result;
+}
+
+async function loadArtworkRowsByIds(db: Database, ids: string[], conditions: SQL[] = []) {
+  return collectInChunks(ids, RECOMMENDATION_D1_ID_CHUNK_SIZE, async (chunk) =>
+    db
+      .select(artworkSelection)
+      .from(artwork)
+      .innerJoin(gallery, eq(artwork.galleryId, gallery.id))
+      .where(and(...conditions, inArray(artwork.id, chunk))),
+  );
+}
+
+async function loadVectorsByIds(index: NonNullable<Context["recommendationIndex"]>, ids: string[]) {
+  return collectInChunks(ids, RECOMMENDATION_VECTOR_ID_CHUNK_SIZE, (chunk) =>
+    index.getByIds(chunk),
+  );
 }
 
 function combineFacets(ids: string[], facets: Map<string, Facets>): Facets {
@@ -284,7 +296,9 @@ export const recommendationsRouter = {
             context.db
               .select({ id: hiddenArtwork.artworkId })
               .from(hiddenArtwork)
-              .where(eq(hiddenArtwork.userId, signalUserId)),
+              .where(eq(hiddenArtwork.userId, signalUserId))
+              .orderBy(desc(hiddenArtwork.createdAt), desc(hiddenArtwork.artworkId))
+              .limit(50),
             context.db
               .select()
               .from(tasteProfile)
@@ -360,9 +374,18 @@ export const recommendationsRouter = {
 
       const conditions: SQL[] = [];
       if (input.seedArtworkId) conditions.push(sql`${artwork.id} <> ${input.seedArtworkId}`);
-      if (hiddenIds.length) conditions.push(notInArray(artwork.id, hiddenIds));
-      if (personalized && !input.seedArtworkId && favoriteIds.length)
-        conditions.push(notInArray(artwork.id, favoriteIds));
+      if (signalUserId && hiddenIds.length)
+        conditions.push(sql`not exists (
+          select 1 from ${hiddenArtwork}
+          where ${hiddenArtwork.userId} = ${signalUserId}
+            and ${hiddenArtwork.artworkId} = ${artwork.id}
+        )`);
+      if (signalUserId && personalized && !input.seedArtworkId && favoriteIds.length)
+        conditions.push(sql`not exists (
+          select 1 from ${favorite}
+          where ${favorite.userId} = ${signalUserId}
+            and ${favorite.artworkId} = ${artwork.id}
+        )`);
       if (input.gallery) conditions.push(eq(gallery.slug, input.gallery));
       if (input.category)
         conditions.push(
@@ -422,7 +445,7 @@ export const recommendationsRouter = {
               }
             }
             if (!anchorVector) {
-              const vectors = await context.recommendationIndex.getByIds(anchorIds);
+              const vectors = await loadVectorsByIds(context.recommendationIndex, anchorIds);
               anchorVector = average(
                 vectors
                   .filter(
@@ -451,7 +474,7 @@ export const recommendationsRouter = {
             }
           }
           if (personalized && hiddenIds.length) {
-            const hiddenVectors = await context.recommendationIndex.getByIds(hiddenIds);
+            const hiddenVectors = await loadVectorsByIds(context.recommendationIndex, hiddenIds);
             const negativeVector = average(
               hiddenVectors
                 .filter(
@@ -489,24 +512,20 @@ export const recommendationsRouter = {
       const candidateIds = new Set(candidates.map((row) => row.id));
       const missingRetrievedIds = retrievedIds.filter((id) => !candidateIds.has(id));
       if (missingRetrievedIds.length) {
-        const retrievedRows = await context.db
-          .select(artworkSelection)
-          .from(artwork)
-          .innerJoin(gallery, eq(artwork.galleryId, gallery.id))
-          .where(and(...conditions, inArray(artwork.id, missingRetrievedIds)));
+        const retrievedRows = await loadArtworkRowsByIds(
+          context.db,
+          missingRetrievedIds,
+          conditions,
+        );
         candidates = [...candidates, ...retrievedRows];
       }
 
-      const allFacetIds = [
-        ...new Set([...candidates.map((row) => row.id), ...anchorIds, ...hiddenIds]),
-      ];
-      const facetRows = allFacetIds.length
-        ? await context.db
-            .select(artworkSelection)
-            .from(artwork)
-            .innerJoin(gallery, eq(artwork.galleryId, gallery.id))
-            .where(inArray(artwork.id, allFacetIds))
-        : [];
+      const facetRows = [...candidates];
+      const knownFacetIds = new Set(facetRows.map((row) => row.id));
+      const supplementalFacetIds = [...new Set([...anchorIds, ...hiddenIds])].filter(
+        (id) => !knownFacetIds.has(id),
+      );
+      facetRows.push(...(await loadArtworkRowsByIds(context.db, supplementalFacetIds)));
       const facets = await loadFacets(context.db, facetRows);
       const positive = combineFacets(anchorIds, facets);
       const negative = personalized ? combineFacets(hiddenIds, facets) : combineFacets([], facets);

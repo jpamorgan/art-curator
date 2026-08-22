@@ -1,6 +1,9 @@
 import { describe, expect, test } from "bun:test";
 
 import {
+  collectInChunks,
+  RECOMMENDATION_D1_ID_CHUNK_SIZE,
+  RECOMMENDATION_VECTOR_ID_CHUNK_SIZE,
   effectivePersonalization,
   diversifyStable,
   freshnessScore,
@@ -13,6 +16,24 @@ import {
 } from "./recommendation-core";
 
 describe("recommendation ranking state", () => {
+  test("keeps D1 and Vectorize ID lookups below their production parameter ceilings", async () => {
+    const ids = Array.from({ length: 205 }, (_, index) => `work-${index}`);
+    const d1Chunks = [];
+    const vectorChunks = [];
+    expect(
+      await collectInChunks(ids, RECOMMENDATION_D1_ID_CHUNK_SIZE, async (chunk) => {
+        d1Chunks.push(chunk.length);
+        return chunk;
+      }),
+    ).toEqual(ids);
+    await collectInChunks(ids.slice(0, 41), RECOMMENDATION_VECTOR_ID_CHUNK_SIZE, async (chunk) => {
+      vectorChunks.push(chunk.length);
+      return chunk;
+    });
+    expect(d1Chunks).toEqual([80, 80, 45]);
+    expect(vectorChunks).toEqual([20, 20, 1]);
+  });
+
   test("covers seed and personalization combinations without leaking signed-out taste", () => {
     expect(recommendationAnchorIds(undefined, false, ["favorite"])).toEqual([]);
     expect(recommendationAnchorIds("seed", false, ["favorite"])).toEqual(["seed"]);
