@@ -62,7 +62,7 @@ export function FollowButton({
       aria-pressed={isFollowing}
       aria-busy={toggle.isPending}
       disabled={isSessionPending || toggle.isPending}
-      className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-neutral-100 py-2 pr-3 pl-2 text-base font-medium text-neutral-950 transition-[background-color,scale] duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-60 sm:h-9 sm:text-sm"
+      className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-lg bg-neutral-100 py-2 pr-3 pl-2 text-base font-medium text-neutral-950 transition-[background-color,scale] duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-60 sm:text-sm lg:h-9"
       onClick={() => {
         if (!session) {
           const currentPath = `${window.location.pathname}${window.location.search}`;

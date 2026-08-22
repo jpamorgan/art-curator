@@ -17,7 +17,7 @@ interface FeedToolbarProps {
 }
 
 const selectClassName =
-  "col-span-full row-start-1 h-10 appearance-none rounded-lg bg-neutral-100 py-2 pr-8 pl-3 text-base text-neutral-800 outline-none focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-950 sm:h-9 sm:text-sm";
+  "col-span-full row-start-1 h-12 w-full min-w-0 appearance-none rounded-lg bg-neutral-100 py-2 pr-8 pl-3 text-base text-neutral-800 outline-none focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-neutral-950 sm:text-sm sm:pointer-fine:h-10 lg:h-9";
 
 function SelectChevron() {
   return (
@@ -45,9 +45,9 @@ export function FeedToolbar({ feed, search }: FeedToolbarProps) {
   };
 
   return (
-    <div className="flex min-w-0 gap-2 overflow-x-auto px-2 py-2 [scrollbar-width:none] sm:px-3 [&::-webkit-scrollbar]:hidden">
+    <div className="grid min-w-0 grid-cols-1 gap-2 px-2 py-2 min-[360px]:grid-cols-2 sm:grid-cols-3 sm:px-3 lg:flex">
       {search.sort ? null : (
-        <label className="grid shrink-0 grid-cols-[1fr_--spacing(8)]">
+        <label className="relative col-span-full grid min-w-0 grid-cols-[minmax(0,1fr)_--spacing(8)] sm:col-span-1 lg:w-auto lg:shrink-0">
           <span className="sr-only">Discovery level</span>
           <select
             name="discovery"
@@ -72,7 +72,7 @@ export function FeedToolbar({ feed, search }: FeedToolbarProps) {
         </label>
       )}
 
-      <label className="grid min-w-40 shrink-0 grid-cols-[1fr_--spacing(8)]">
+      <label className="relative grid min-w-0 grid-cols-[minmax(0,1fr)_--spacing(8)] lg:min-w-40 lg:shrink-0">
         <span className="sr-only">Filter artwork</span>
         <select
           name="artwork-filter"
@@ -101,7 +101,7 @@ export function FeedToolbar({ feed, search }: FeedToolbarProps) {
         <SelectChevron />
       </label>
 
-      <label className="grid shrink-0 grid-cols-[1fr_--spacing(8)]">
+      <label className="relative grid min-w-0 grid-cols-[minmax(0,1fr)_--spacing(8)] lg:w-auto lg:shrink-0">
         <span className="sr-only">Sort artwork</span>
         <select
           name="artwork-sort"

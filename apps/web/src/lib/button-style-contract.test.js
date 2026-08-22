@@ -13,7 +13,9 @@ describe("button style contract", () => {
     ).text();
 
     expect(buttonSource).toContain("justify-center rounded-lg");
-    expect(buttonSource).toContain('default:\n          "h-10 gap-1.5 px-3.5');
+    expect(buttonSource).toContain('default:\n          "h-12 gap-1.5 px-3.5');
+    expect(buttonSource).toContain("sm:pointer-fine:h-10");
+    expect(buttonSource).toContain('icon: "size-12 rounded-full sm:pointer-fine:size-8"');
     expect(buttonSource.match(/rounded-full/gu)).toHaveLength(4);
     expect(buttonSource).toContain("active:not-aria-[haspopup]:scale-[0.96]");
     expect(buttonSource).not.toContain("translate-y-px");
@@ -22,11 +24,14 @@ describe("button style contract", () => {
   test("keeps the header tabs compact without shrinking their hit area", async () => {
     const headerSource = await readWebSource("components/header.tsx");
 
-    expect(headerSource).toContain("h-9 shrink-0 items-center gap-1 rounded-lg px-2");
+    expect(headerSource).toContain("h-9 shrink-0 items-center gap-1.5 rounded-lg px-3.5");
     expect(headerSource).toContain("after:h-10");
     expect(headerSource).not.toMatch(/Compass|Sparkles/u);
     expect(headerSource).toContain('isExplore ? "bg-neutral-100 text-neutral-950"');
     expect(headerSource).toMatch(/aria-label="Saved"[\s\S]*?rounded-full/u);
+    expect(headerSource).toContain('<details className="group relative lg:hidden">');
+    expect(headerSource).toContain('aria-label="Open navigation"');
+    expect(headerSource).toContain("size-12 cursor-pointer");
   });
 
   test("keeps text actions rectangular across app states", async () => {

@@ -104,14 +104,14 @@ function ArtworkDetailPage() {
                         key={category.slug}
                         to="/"
                         search={{ category: category.slug }}
-                        className="rounded-full bg-neutral-100 px-3 py-1.5 text-base text-neutral-700 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+                        className="inline-flex min-h-12 items-center rounded-full bg-neutral-100 px-3 text-base text-neutral-700 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-8"
                       >
                         {category.name}
                       </Link>
                     ) : (
                       <span
                         key={category.name}
-                        className="rounded-full bg-neutral-100 px-3 py-1.5 text-neutral-700"
+                        className="inline-flex min-h-12 items-center rounded-full bg-neutral-100 px-3 text-neutral-700 lg:min-h-8"
                       >
                         {category.name}
                       </span>
@@ -119,7 +119,7 @@ function ArtworkDetailPage() {
                   )}
                 </div>
               )}
-              <h1 className="max-w-[22ch] text-balance text-3xl font-medium tracking-tight">
+              <h1 className="max-w-[22ch] break-words text-balance text-3xl font-medium tracking-tight">
                 {artwork.title}
               </h1>
               <p className="text-pretty text-base text-neutral-600 sm:text-sm">
@@ -144,9 +144,9 @@ function ArtworkDetailPage() {
               {artwork.medium && <MetadataRow term="Medium" detail={artwork.medium} />}
               {artwork.dimensions && <MetadataRow term="Dimensions" detail={artwork.dimensions} />}
               {gallery && (
-                <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 py-3 text-base sm:text-sm">
+                <div className="grid grid-cols-1 gap-1 py-3 text-base min-[360px]:grid-cols-[7rem_minmax(0,1fr)] min-[360px]:gap-4 sm:text-sm">
                   <dt className="font-medium text-neutral-950">Gallery</dt>
-                  <dd className="min-w-0 text-right text-neutral-600">
+                  <dd className="min-w-0 break-words text-left text-neutral-600 min-[360px]:text-right">
                     {gallery.slug ? (
                       <Link
                         to="/galleries/$slug"
@@ -183,14 +183,14 @@ function ArtworkDetailPage() {
                         key={style.slug}
                         to="/styles/$slug"
                         params={{ slug: style.slug }}
-                        className="rounded-full bg-neutral-100 px-3 py-1.5 text-base text-neutral-700 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+                        className="inline-flex min-h-12 items-center rounded-full bg-neutral-100 px-3 text-base text-neutral-700 outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-8"
                       >
                         {style.name}
                       </Link>
                     ) : (
                       <span
                         key={style.name}
-                        className="rounded-full bg-neutral-100 px-3 py-1.5 text-neutral-700"
+                        className="inline-flex min-h-12 items-center rounded-full bg-neutral-100 px-3 text-neutral-700 lg:min-h-8"
                       >
                         {style.name}
                       </span>
@@ -205,7 +205,7 @@ function ArtworkDetailPage() {
                 href={artwork.source.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+                className="inline-flex min-h-12 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
               >
                 <ArrowUpRight className="size-4 shrink-0 stroke-neutral-950" aria-hidden="true" />
                 {artwork.source.name}
@@ -222,7 +222,7 @@ function ArtworkDetailPage() {
                 href={artwork.imageSource.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex min-h-10 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+                className="inline-flex min-h-12 items-center gap-2 self-start rounded-lg bg-neutral-100 py-2 pr-3.5 pl-3 text-base font-medium text-neutral-950 transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
               >
                 <ArrowUpRight className="size-4 shrink-0 stroke-neutral-950" aria-hidden="true" />
                 Image source
@@ -258,9 +258,11 @@ function ArtworkDetailPage() {
 
 function MetadataRow({ term, detail }: { term: string; detail: string }) {
   return (
-    <div className="grid grid-cols-[7rem_minmax(0,1fr)] gap-4 py-3 text-base sm:text-sm">
+    <div className="grid grid-cols-1 gap-1 py-3 text-base min-[360px]:grid-cols-[7rem_minmax(0,1fr)] min-[360px]:gap-4 sm:text-sm">
       <dt className="font-medium text-neutral-950">{term}</dt>
-      <dd className="min-w-0 text-right text-neutral-600">{detail}</dd>
+      <dd className="min-w-0 break-words text-left text-neutral-600 min-[360px]:text-right">
+        {detail}
+      </dd>
     </div>
   );
 }
@@ -330,7 +332,7 @@ function ArtworkDetailError() {
         </p>
         <Link
           to="/"
-          className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Browse art
         </Link>
@@ -346,7 +348,7 @@ function ArtworkDetailNotFound() {
         <h1 className="text-balance text-2xl font-medium tracking-tight">Artwork not found</h1>
         <Link
           to="/"
-          className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Browse art
         </Link>

@@ -54,13 +54,13 @@ export function FilteredGalleryPage({
 
   return (
     <>
-      <div className="flex min-h-16 items-end justify-between gap-4 px-3 py-3">
+      <div className="flex min-h-16 flex-col items-start justify-between gap-3 px-3 py-3 min-[360px]:flex-row min-[360px]:items-end">
         <div className="min-w-0">
-          <h1 className="min-w-0 truncate text-xl font-medium text-neutral-950 text-balance">
+          <h1 className="min-w-0 break-words text-xl font-medium text-neutral-950 text-balance min-[360px]:line-clamp-2">
             {title}
           </h1>
           {subtitle ? (
-            <p className="truncate text-base text-neutral-500 sm:text-sm">{subtitle}</p>
+            <p className="break-words text-base text-neutral-500 sm:text-sm">{subtitle}</p>
           ) : null}
         </div>
         {entityId ? (
@@ -92,7 +92,7 @@ export function FilteredGalleryPageSkeleton({
   return (
     <div role="status" aria-busy="true" aria-live="polite">
       <span className="sr-only">Loading collection</span>
-      <div className="flex min-h-16 items-end justify-between gap-4 px-3 py-3">
+      <div className="flex min-h-16 flex-col items-start justify-between gap-3 px-3 py-3 min-[360px]:flex-row min-[360px]:items-end">
         <Skeleton className="h-7 w-48 max-w-2/3 rounded-full bg-neutral-100" />
         {filter === "gallery" ? (
           <Skeleton className="h-5 w-24 rounded-full bg-neutral-100" />
@@ -130,21 +130,21 @@ export function FilteredGalleryRouteState({ kind, status }: FilteredGalleryRoute
         {kind === "artist" ? (
           <Link
             to="/artists"
-            className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+            className="inline-flex min-h-12 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
           >
             {browseLabel}
           </Link>
         ) : kind === "gallery" ? (
           <Link
             to="/galleries"
-            className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+            className="inline-flex min-h-12 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
           >
             {browseLabel}
           </Link>
         ) : (
           <Link
             to="/styles"
-            className="inline-flex min-h-10 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+            className="inline-flex min-h-12 items-center rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
           >
             {browseLabel}
           </Link>

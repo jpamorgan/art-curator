@@ -22,7 +22,7 @@ export function Input({
   ...props
 }: InputProps): React.ReactElement {
   const inputClassName = cn(
-    "h-8.5 w-full min-w-0 rounded-[inherit] px-[calc(--spacing(3)-1px)] text-base leading-8.5 text-foreground outline-none [transition:background-color_5000000s_ease-in-out_0s] placeholder:text-muted-foreground/72 sm:h-7.5 sm:text-sm sm:leading-7.5 autofill:[-webkit-text-fill-color:var(--foreground)]",
+    "h-12 w-full min-w-0 rounded-[inherit] px-[calc(--spacing(3)-1px)] text-base leading-12 text-foreground outline-none [transition:background-color_5000000s_ease-in-out_0s] placeholder:text-muted-foreground/72 sm:text-sm sm:pointer-fine:h-10 sm:pointer-fine:leading-10 autofill:[-webkit-text-fill-color:var(--foreground)]",
     size === "sm" && "h-7.5 px-[calc(--spacing(2.5)-1px)] leading-7.5 sm:h-6.5 sm:leading-6.5",
     size === "lg" && "h-9.5 leading-9.5 sm:h-8.5 sm:leading-8.5",
     props.type === "search" &&

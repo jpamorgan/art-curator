@@ -68,7 +68,7 @@ export default function SubmissionDialog() {
         variant="secondary"
         aria-label="Submit art"
         aria-haspopup="dialog"
-        className="size-10 rounded-full border-0 bg-neutral-100 text-neutral-700 transition-[background-color,color,scale] duration-150 ease-out hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none"
+        className="size-12 rounded-full border-0 bg-neutral-100 text-neutral-700 transition-[background-color,color,scale] duration-150 ease-out hover:bg-neutral-200 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 active:scale-[0.96] motion-reduce:transition-none lg:size-10"
         onClick={(event) => {
           setError(null);
           (event.currentTarget.nextElementSibling as HTMLDialogElement | null)?.showModal();
@@ -81,21 +81,21 @@ export default function SubmissionDialog() {
         id={dialogId}
         aria-labelledby={`${dialogId}-title`}
         aria-describedby={`${dialogId}-helper`}
-        className="m-auto w-[calc(100%-1.5rem)] max-w-lg rounded-2xl border-0 bg-white text-neutral-950 shadow-xl backdrop:bg-black/32"
+        className="m-auto max-h-[calc(100dvh-1rem)] w-[calc(100%-1rem)] max-w-lg overflow-y-auto rounded-2xl border-0 bg-white text-neutral-950 shadow-xl backdrop:bg-black/32 sm:w-[calc(100%-1.5rem)]"
         onCancel={(event) => isSubmitting && event.preventDefault()}
         onClose={() => setUrl("")}
         onClick={(event) => {
           if (event.target === event.currentTarget && !isSubmitting) event.currentTarget.close();
         }}
       >
-        <form className="grid gap-4 p-6" onSubmit={(event) => void submit(event)}>
+        <form className="grid gap-4 p-4 sm:p-6" onSubmit={(event) => void submit(event)}>
           <h2 id={`${dialogId}-title`} className="text-2xl font-semibold tracking-tight">
             Add a link
           </h2>
-          <p id={`${dialogId}-helper`} className="text-sm text-neutral-500">
+          <p id={`${dialogId}-helper`} className="text-base text-neutral-500 sm:text-sm">
             Save an artwork, artist, gallery, or collection to consider.
           </p>
-          <label htmlFor={`${dialogId}-url`} className="text-sm font-medium">
+          <label htmlFor={`${dialogId}-url`} className="text-base font-medium sm:text-sm">
             Link
           </label>
           <Input
@@ -116,11 +116,11 @@ export default function SubmissionDialog() {
             }}
           />
           {error ? (
-            <p id={`${dialogId}-error`} role="alert" className="text-sm text-red-700">
+            <p id={`${dialogId}-error`} role="alert" className="text-base text-red-700 sm:text-sm">
               {error}
             </p>
           ) : null}
-          <div className="flex justify-end gap-2">
+          <div className="grid grid-cols-2 gap-2 sm:flex sm:justify-end">
             <Button
               type="button"
               variant="secondary"

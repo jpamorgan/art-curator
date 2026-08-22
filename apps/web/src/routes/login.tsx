@@ -43,7 +43,7 @@ function RouteComponent() {
               aria-pressed={mode === "sign-in"}
               disabled={isAuthenticating}
               onClick={() => setMode("sign-in")}
-              className="min-h-10 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
+              className="min-h-12 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm lg:min-h-10"
             >
               Log in
             </button>
@@ -52,7 +52,7 @@ function RouteComponent() {
               aria-pressed={mode === "sign-up"}
               disabled={isAuthenticating}
               onClick={() => setMode("sign-up")}
-              className="min-h-10 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm"
+              className="min-h-12 rounded-lg px-3.5 text-base font-medium transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait aria-pressed:bg-white aria-pressed:shadow-sm aria-pressed:ring-1 aria-pressed:ring-black/5 sm:text-sm lg:min-h-10"
             >
               Sign up
             </button>

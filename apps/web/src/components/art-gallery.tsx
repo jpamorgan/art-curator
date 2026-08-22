@@ -160,7 +160,7 @@ export function ArtGallery({
           <button
             type="button"
             aria-busy={isRetrying}
-            className="min-h-10 min-w-24 rounded-lg bg-neutral-950 px-3.5 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-70 sm:text-sm"
+            className="min-h-12 min-w-24 rounded-lg bg-neutral-950 px-3.5 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:not-disabled:scale-[0.96] disabled:cursor-wait disabled:opacity-70 sm:text-sm lg:min-h-10"
             disabled={isRetrying}
             onClick={onRetry}
           >
@@ -247,7 +247,7 @@ export function ArtGallery({
           <div className="flex justify-center py-6">
             <button
               type="button"
-              className="min-h-10 rounded-lg bg-neutral-100 px-3.5 text-base text-neutral-800 transition-[background-color,scale] duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
+              className="min-h-12 rounded-lg bg-neutral-100 px-3.5 text-base text-neutral-800 transition-[background-color,scale] duration-150 ease-out hover:bg-neutral-200 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm lg:min-h-10"
               disabled={isFetchingNextPage}
               onClick={() => {
                 if (!isFetchingNextPage) void fetchNextPage();

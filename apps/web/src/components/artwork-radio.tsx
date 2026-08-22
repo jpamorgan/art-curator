@@ -45,13 +45,13 @@ export function ArtworkRadio({ artworkId, artworkTitle }: ArtworkRadioProps) {
             <h2 className="max-w-[22ch] text-balance text-2xl font-medium tracking-tight sm:text-xl">
               Keep exploring from this work
             </h2>
-            <p className="max-w-[62ch] text-pretty text-base text-neutral-600 sm:text-sm">
+            <p className="max-w-[62ch] break-words text-pretty text-base text-neutral-600 sm:text-sm">
               Start a visual radio station anchored by {artworkTitle}.
             </p>
           </div>
           <button
             type="button"
-            className="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg bg-neutral-950 py-2 pr-3 pl-2 text-base font-medium text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:h-9 sm:text-sm"
+            className="inline-flex h-12 shrink-0 items-center gap-1.5 rounded-lg bg-neutral-950 py-2 pr-3 pl-2 text-base font-medium text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm lg:h-9"
             onClick={() => setIsOpen(true)}
           >
             <Radio aria-hidden="true" className="size-4 shrink-0 stroke-white" />
@@ -73,13 +73,13 @@ export function ArtworkRadio({ artworkId, artworkTitle }: ArtworkRadioProps) {
             >
               Artwork radio
             </h2>
-            <p className="max-w-[62ch] text-pretty text-base text-neutral-600 sm:text-sm">
+            <p className="max-w-[62ch] break-words text-pretty text-base text-neutral-600 sm:text-sm">
               Anchored by {artworkTitle}. Adjust how far the station wanders.
             </p>
           </div>
 
-          <div className="flex min-w-0 flex-wrap items-center gap-2">
-            <fieldset className="flex min-w-0 rounded-xl bg-neutral-100 p-1">
+          <div className="grid min-w-0 gap-2 sm:flex sm:flex-wrap sm:items-center">
+            <fieldset className="grid min-w-0 grid-cols-3 rounded-xl bg-neutral-100 p-1 sm:flex">
               <legend className="sr-only">Discovery level</legend>
               {DISCOVERY_LEVELS.map((level) => (
                 <label key={level} className="relative shrink-0">
@@ -91,7 +91,7 @@ export function ArtworkRadio({ artworkId, artworkTitle }: ArtworkRadioProps) {
                     className="peer sr-only"
                     onChange={() => setDiscovery(level)}
                   />
-                  <span className="flex h-9 cursor-pointer items-center rounded-lg px-2.5 text-base text-neutral-600 peer-checked:bg-white peer-checked:text-neutral-950 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-0 peer-focus-visible:outline-neutral-950 sm:h-8 sm:text-sm">
+                  <span className="flex h-12 cursor-pointer items-center justify-center rounded-lg px-1 text-sm text-neutral-600 peer-checked:bg-white peer-checked:text-neutral-950 peer-focus-visible:outline-2 peer-focus-visible:outline-offset-0 peer-focus-visible:outline-neutral-950 min-[360px]:px-2 min-[360px]:text-base sm:px-2.5 sm:text-sm sm:pointer-fine:h-10 lg:h-8">
                     {level === "familiar"
                       ? "Familiar"
                       : level === "balanced"
@@ -102,7 +102,7 @@ export function ArtworkRadio({ artworkId, artworkTitle }: ArtworkRadioProps) {
               ))}
             </fieldset>
 
-            <label className="flex h-10 items-center gap-2 rounded-lg px-2.5 text-base text-neutral-700 sm:h-9 sm:text-sm">
+            <label className="flex h-12 items-center gap-2 rounded-lg px-2.5 text-base text-neutral-700 sm:text-sm lg:h-9">
               <span className="group relative inline-flex w-11 shrink-0 rounded-full bg-neutral-200 p-0.5 inset-ring inset-ring-neutral-950/5 outline-offset-2 transition-colors duration-200 ease-in-out has-checked:bg-neutral-950 has-focus-visible:outline-2 has-focus-visible:outline-neutral-950 sm:w-9">
                 <span className="aspect-square w-1/2 rounded-full bg-white ring-1 ring-neutral-950/5 shadow-xs transition-transform duration-200 ease-in-out group-has-checked:translate-x-full" />
                 <input

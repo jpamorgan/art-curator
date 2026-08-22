@@ -60,7 +60,7 @@ export function ColdStartPicker({
           {onRetry ? (
             <button
               type="button"
-              className="min-h-10 rounded-lg bg-neutral-950 px-3.5 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm"
+              className="min-h-12 rounded-lg bg-neutral-950 px-3.5 text-base text-white transition-transform duration-150 ease-out focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 active:scale-[0.96] sm:text-sm lg:min-h-10"
               onClick={onRetry}
             >
               Try again

@@ -15,7 +15,7 @@ export function RouteUnavailable({ title, message }: RouteUnavailableProps) {
         <p className="text-pretty text-base text-neutral-600 sm:text-sm">{message}</p>
         <button
           type="button"
-          className="min-h-10 rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm"
+          className="min-h-12 rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
           onClick={() => void router.invalidate()}
         >
           Try again

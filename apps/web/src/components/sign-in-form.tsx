@@ -98,7 +98,7 @@ export default function SignInForm({ onPendingChange, returnTo }: SignInFormProp
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={errors.length > 0}
                   aria-describedby={errors.length > 0 ? "sign-in-email-error" : undefined}
-                  className="h-12 rounded-xl bg-white px-3 text-base outline-1 -outline-offset-1 outline-black/15 placeholder:text-neutral-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-950 sm:h-10 sm:text-sm"
+                  className="h-12 rounded-xl bg-white px-3 text-base outline-1 -outline-offset-1 outline-black/15 placeholder:text-neutral-400 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm sm:pointer-fine:h-10"
                 />
                 {errors.length > 0 && (
                   <p id="sign-in-email-error" className="text-base text-red-700 sm:text-sm">
@@ -128,7 +128,7 @@ export default function SignInForm({ onPendingChange, returnTo }: SignInFormProp
                   onChange={(event) => field.handleChange(event.target.value)}
                   aria-invalid={errors.length > 0}
                   aria-describedby={errors.length > 0 ? "sign-in-password-error" : undefined}
-                  className="h-12 rounded-xl bg-white px-3 text-base outline-1 -outline-offset-1 outline-black/15 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-950 sm:h-10 sm:text-sm"
+                  className="h-12 rounded-xl bg-white px-3 text-base outline-1 -outline-offset-1 outline-black/15 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-neutral-950 sm:text-sm sm:pointer-fine:h-10"
                 />
                 {errors.length > 0 && (
                   <p id="sign-in-password-error" className="text-base text-red-700 sm:text-sm">
@@ -153,7 +153,7 @@ export default function SignInForm({ onPendingChange, returnTo }: SignInFormProp
             <button
               type="submit"
               aria-busy={isAuthenticating || isSubmitting}
-              className="h-12 rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:opacity-70 sm:h-10 sm:text-sm"
+              className="h-12 rounded-lg bg-neutral-950 px-3.5 text-base font-medium text-white transition-transform duration-150 ease-out outline-none active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-neutral-950 disabled:cursor-wait disabled:opacity-70 sm:text-sm sm:pointer-fine:h-10"
               disabled={!canSubmit || isAuthenticating || isSubmitting}
             >
               <PendingButtonLabel

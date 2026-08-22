@@ -2,12 +2,16 @@
 @import "@art/ui/globals.css";
 
 html {
+  max-width: 100%;
+  overflow-x: clip;
   scrollbar-gutter: stable;
 }
 
 body {
   margin: 0;
-  min-width: 20rem;
+  min-width: 0;
+  max-width: 100%;
+  overflow-x: clip;
   background: white;
 }
 

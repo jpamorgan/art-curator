@@ -147,7 +147,9 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
   const session = isPending ? initialSession : clientSession;
 
   if (isPending && initialSession === undefined) {
-    return <Skeleton className="size-10 rounded-full bg-neutral-100" aria-hidden="true" />;
+    return (
+      <Skeleton className="size-12 rounded-full bg-neutral-100 lg:size-10" aria-hidden="true" />
+    );
   }
 
   if (!session) {
@@ -156,7 +158,7 @@ export default function UserMenu({ initialSession }: { initialSession: PublicUse
         to="/login"
         search={{ redirect: "/" }}
         aria-label="Log in"
-        className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-full text-neutral-700 transition-[background-color,color,scale] duration-150 ease-out outline-none hover:bg-neutral-100 hover:text-neutral-950 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950"
+        className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-full text-neutral-700 transition-[background-color,color,scale] duration-150 ease-out outline-none hover:bg-neutral-100 hover:text-neutral-950 active:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 lg:size-10"
       >
         <UserRound aria-hidden="true" className="size-5 shrink-0 stroke-current" />
       </Link>
@@ -226,7 +228,7 @@ export function AuthenticatedUserMenu({
             type="button"
             aria-label={`Account menu for ${accountLabel}`}
             aria-busy={isSigningOut}
-            className="relative inline-flex size-10 shrink-0 items-center justify-center rounded-full transition-[background-color,scale] duration-150 ease-out outline-none hover:bg-neutral-100 active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 disabled:cursor-wait"
+            className="relative inline-flex size-12 shrink-0 items-center justify-center rounded-full transition-[background-color,scale] duration-150 ease-out outline-none hover:bg-neutral-100 active:not-disabled:scale-[0.96] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-solid focus-visible:outline-neutral-950 disabled:cursor-wait lg:size-10"
             disabled={isSigningOut}
           />
         }
@@ -243,7 +245,7 @@ export function AuthenticatedUserMenu({
         className="w-64 rounded-2xl bg-white p-1 text-neutral-950 shadow-[0_0_0_1px_rgba(0,0,0,0.06),0_1px_2px_-1px_rgba(0,0,0,0.08),0_8px_24px_-8px_rgba(0,0,0,0.18)]"
       >
         <DropdownMenuGroup>
-          <DropdownMenuLabel className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5 text-sm font-normal text-neutral-500">
+          <DropdownMenuLabel className="flex min-w-0 flex-col gap-0.5 px-3 py-2.5 text-base font-normal text-neutral-500 lg:text-sm">
             <span className="block truncate font-medium text-neutral-950">{accountLabel}</span>
             <span className="block truncate">{session.user.email}</span>
           </DropdownMenuLabel>
@@ -252,7 +254,7 @@ export function AuthenticatedUserMenu({
             aria-busy={isSigningOut}
             disabled={isSigningOut}
             closeOnClick={false}
-            className="min-h-10 cursor-pointer rounded-xl px-3 text-sm transition-[background-color,color] duration-150 ease-out focus:bg-neutral-100"
+            className="min-h-12 cursor-pointer rounded-xl px-3 text-base transition-[background-color,color] duration-150 ease-out focus:bg-neutral-100 lg:min-h-10 lg:text-sm"
             onClick={() => {
               void handleSignOut();
             }}

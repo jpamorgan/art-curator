@@ -70,25 +70,25 @@ function RootApp() {
       <footer className="flex flex-wrap items-center justify-center gap-1 px-3 pb-3">
         <Link
           to="/artists"
-          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Artists
         </Link>
         <Link
           to="/galleries"
-          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Galleries
         </Link>
         <Link
           to="/styles"
-          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Styles
         </Link>
         <a
           href="https://unavatar.io"
-          className="inline-flex min-h-10 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
           Avatars provided by Unavatar
         </a>
