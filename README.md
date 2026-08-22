@@ -4,6 +4,8 @@ A minimal web app for discovering and saving physical art, styles, and galleries
 
 [art.jpamorgan.com](https://art.jpamorgan.com)
 
+Public source: [github.com/jpamorgan/art-curator](https://github.com/jpamorgan/art-curator)
+
 ## Stack
 
 - TanStack Start and React
@@ -45,6 +47,19 @@ bun run check-types
 bun run check
 bun run build
 ```
+
+## Agent discovery
+
+The production site publishes crawler policy, a live catalog sitemap, Markdown page
+fallbacks, and machine-readable agent discovery files. Start with
+[`llms.txt`](https://art.jpamorgan.com/llms.txt), which links the ARD catalog, Agent
+Skills index, MCP server card, and the repository's
+[`AGENTS.md`](https://github.com/jpamorgan/art-curator/blob/main/AGENTS.md).
+
+The public catalog and `browse_art` MCP tool are anonymous and read-only. Browser sessions
+for favorites, follows, submissions, and personalized recommendations are not agent
+credentials; `auth.md` documents that boundary without advertising unsupported OAuth or
+agent-registration endpoints.
 
 ## Curation API
 

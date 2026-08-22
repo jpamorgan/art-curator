@@ -31,7 +31,11 @@ export const Route = createFileRoute("/_auth/favorites")({
     );
   },
   head: () => ({
-    meta: [{ title: "Favorites — Art" }, { name: "description", content: "Your saved art." }],
+    meta: [
+      { title: "Favorites — Art" },
+      { name: "description", content: "Your saved art." },
+      { name: "robots", content: "noindex, nofollow" },
+    ],
   }),
   pendingComponent: GalleryPageSkeleton,
   errorComponent: () => (

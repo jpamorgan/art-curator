@@ -16,6 +16,7 @@ export const Route = createFileRoute("/_auth/following")({
         name: "description",
         content: "The latest curated works from artists, galleries, and styles you follow.",
       },
+      { name: "robots", content: "noindex, nofollow" },
     ],
   }),
   pendingComponent: GalleryPageSkeleton,

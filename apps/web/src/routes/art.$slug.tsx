@@ -19,6 +19,7 @@ export const Route = createFileRoute("/art/$slug")({
     if (!loaderData) {
       return {
         meta: [{ title: "Artwork — Art" }],
+        links: artworkLinks(params.slug),
       };
     }
 
@@ -34,7 +35,7 @@ export const Route = createFileRoute("/art/$slug")({
         { property: "og:image", content: loaderData.artwork.imageUrl },
         { property: "og:type", content: "article" },
       ],
-      links: [{ rel: "canonical", href: `https://art.jpamorgan.com/art/${params.slug}` }],
+      links: artworkLinks(params.slug),
     };
   },
   pendingComponent: ArtworkDetailSkeleton,
@@ -42,6 +43,17 @@ export const Route = createFileRoute("/art/$slug")({
   notFoundComponent: ArtworkDetailNotFound,
   component: ArtworkDetailPage,
 });
+
+function artworkLinks(slug: string) {
+  return [
+    { rel: "canonical", href: `https://art.jpamorgan.com/art/${slug}` },
+    {
+      rel: "alternate",
+      type: "text/markdown",
+      href: `https://art.jpamorgan.com/art/${slug}.md`,
+    },
+  ];
+}
 
 type NamedLink = {
   name: string;

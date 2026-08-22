@@ -43,7 +43,7 @@ export const Route = createFileRoute("/galleries/$slug")({
     if (!data) throw notFound();
     return data;
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const gallery = loaderData?.gallery;
     if (!gallery) {
       return {
@@ -51,6 +51,7 @@ export const Route = createFileRoute("/galleries/$slug")({
           { title: "Gallery — Art" },
           { name: "description", content: "Browse art by gallery." },
         ],
+        links: galleryLinks(params.slug),
       };
     }
 
@@ -59,7 +60,7 @@ export const Route = createFileRoute("/galleries/$slug")({
 
     return {
       meta: [{ title }, { name: "description", content: description }],
-      links: [{ rel: "canonical", href: `https://art.jpamorgan.com/galleries/${gallery.slug}` }],
+      links: galleryLinks(gallery.slug),
     };
   },
   pendingComponent: () => <FilteredGalleryPageSkeleton filter="gallery" />,
@@ -67,6 +68,17 @@ export const Route = createFileRoute("/galleries/$slug")({
   notFoundComponent: () => <FilteredGalleryRouteState kind="gallery" status="not-found" />,
   component: GalleryRoute,
 });
+
+function galleryLinks(slug: string) {
+  return [
+    { rel: "canonical", href: `https://art.jpamorgan.com/galleries/${slug}` },
+    {
+      rel: "alternate",
+      type: "text/markdown",
+      href: `https://art.jpamorgan.com/galleries/${slug}.md`,
+    },
+  ];
+}
 
 function GalleryRoute() {
   const { slug } = Route.useParams();

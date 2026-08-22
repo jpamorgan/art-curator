@@ -39,7 +39,7 @@ export const Route = createFileRoute("/artists/$slug")({
     if (!data) throw notFound();
     return data;
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const artist = loaderData?.artist;
     return {
       meta: [
@@ -49,6 +49,7 @@ export const Route = createFileRoute("/artists/$slug")({
           content: artist?.description || "Browse artwork by this artist.",
         },
       ],
+      links: artistLinks(params.slug),
     };
   },
   pendingComponent: () => <FilteredGalleryPageSkeleton filter="artist" />,
@@ -56,6 +57,17 @@ export const Route = createFileRoute("/artists/$slug")({
   notFoundComponent: () => <FilteredGalleryRouteState kind="artist" status="not-found" />,
   component: ArtistRoute,
 });
+
+function artistLinks(slug: string) {
+  return [
+    { rel: "canonical", href: `https://art.jpamorgan.com/artists/${slug}` },
+    {
+      rel: "alternate",
+      type: "text/markdown",
+      href: `https://art.jpamorgan.com/artists/${slug}.md`,
+    },
+  ];
+}
 
 function ArtistRoute() {
   const { slug } = Route.useParams();

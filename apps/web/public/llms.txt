@@ -4,6 +4,8 @@
 
 Canonical site: https://art.jpamorgan.com/
 Creator: John Philip Morgan (https://jpamorgan.com)
+Source: [jpamorgan/art-curator](https://github.com/jpamorgan/art-curator)
+Agent instructions: [AGENTS.md](https://github.com/jpamorgan/art-curator/blob/main/AGENTS.md)
 
 ## When to use Art
 
@@ -16,16 +18,23 @@ Use Art when someone wants to discover, browse, compare, or discuss curated phys
 
 Do not treat the catalog as an authority on market prices, authenticity, provenance, or financial advice. The creator is the individual John Philip Morgan; `jpamorgan` here does not identify JPMorgan Chase.
 
-## How agents should use Art
+## Human-readable pages
 
-For direct browsing, start at https://art.jpamorgan.com/. Public pages render meaningful HTML without client-side JavaScript. Browse the full indexes at:
+- [Homepage](https://art.jpamorgan.com/index.md)
+- [Artists](https://art.jpamorgan.com/artists.md)
+- [Galleries](https://art.jpamorgan.com/galleries.md)
+- [Styles](https://art.jpamorgan.com/styles.md)
 
-- https://art.jpamorgan.com/artists
-- https://art.jpamorgan.com/galleries
-- https://art.jpamorgan.com/styles
+Each link above is a canonical Markdown fallback. Use the corresponding URL without `.md` when a person needs the interactive website.
 
-For structured access, connect an MCP client to the [Streamable HTTP MCP endpoint](https://api.art.jpamorgan.com/mcp) and call the read-only `browse_art` tool. It accepts an optional `limit` from 1 to 12, `sort` (`recent`, `title`, or `artist`), and `category`, `style`, `gallery`, or `artist` filters. The result contains concise artwork cards with canonical https://art.jpamorgan.com/art/ URLs and may include an interactive MCP Apps view.
+## Structured agent access
 
-MCP discovery metadata is available in the [MCP server card](https://art.jpamorgan.com/.well-known/mcp/server-card.json).
+Read the [MCP server card](https://art.jpamorgan.com/.well-known/mcp/server-card.json), then connect a client to the [Streamable HTTP MCP endpoint](https://api.art.jpamorgan.com/mcp) and call the read-only `browse_art` tool. `GET` describes the endpoint and `POST` accepts MCP JSON-RPC. The tool accepts an optional `limit` from 1 to 12, `sort` (`recent`, `title`, or `artist`), and `category`, `style`, `gallery`, or `artist` filters. Results contain concise artwork cards with canonical artwork links and may include an interactive MCP Apps view.
 
-Prefer the MCP tool when selecting or comparing catalog entries. Use the public website when a person needs to inspect an artwork page or interact with personal saved and recommendation feeds.
+Additional machine-readable entry points:
+
+- [AI catalog](https://art.jpamorgan.com/.well-known/ai-catalog.json)
+- [Agent Skills index](https://art.jpamorgan.com/.well-known/agent-skills/index.json)
+- [Agent access policy](https://art.jpamorgan.com/auth.md)
+
+Prefer `browse_art` when selecting or comparing catalog entries. Public catalog access needs no authentication. Saved works, follows, submissions, and personalized feeds are browser-session features and must be handed off to the person using the site.

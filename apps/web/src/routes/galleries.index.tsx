@@ -13,7 +13,14 @@ export const Route = createFileRoute("/galleries/")({
       { title: "Galleries — Art" },
       { name: "description", content: "Browse art by gallery." },
     ],
-    links: [{ rel: "canonical", href: "https://art.jpamorgan.com/galleries" }],
+    links: [
+      { rel: "canonical", href: "https://art.jpamorgan.com/galleries" },
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        href: "https://art.jpamorgan.com/galleries.md",
+      },
+    ],
   }),
   pendingComponent: () => <BrowseIndexSkeleton kind="galleries" />,
   errorComponent: () => (

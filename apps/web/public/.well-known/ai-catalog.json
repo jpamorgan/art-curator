@@ -1,0 +1,25 @@
+{
+  "specVersion": "1.0",
+  "host": {
+    "displayName": "Art by John Philip Morgan",
+    "identifier": "art.jpamorgan.com",
+    "documentationUrl": "https://art.jpamorgan.com/llms.txt"
+  },
+  "entries": [
+    {
+      "identifier": "urn:air:art.jpamorgan.com:mcp:art-catalog",
+      "displayName": "Art catalog MCP server",
+      "type": "application/mcp-server-card+json",
+      "url": "https://art.jpamorgan.com/.well-known/mcp/server-card.json",
+      "description": "Read-only discovery of physical artworks curated by John Philip Morgan, with artist, gallery, style, category, and sort filters.",
+      "tags": ["art", "artwork", "discovery", "catalog", "mcp"],
+      "capabilities": ["browse_art", "filter_artworks", "render_artwork_gallery"],
+      "representativeQueries": [
+        "Show me recently added physical artworks.",
+        "Find artworks from a particular artist, gallery, or style.",
+        "Compare a small selection of works in this catalog."
+      ],
+      "version": "1.0.0"
+    }
+  ]
+}

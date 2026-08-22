@@ -43,11 +43,12 @@ export const Route = createFileRoute("/styles/$slug")({
     if (!data) throw notFound();
     return data;
   },
-  head: ({ loaderData }) => {
+  head: ({ loaderData, params }) => {
     const style = loaderData?.style;
     if (!style) {
       return {
         meta: [{ title: "Style — Art" }, { name: "description", content: "Browse art by style." }],
+        links: styleLinks(params.slug),
       };
     }
 
@@ -56,7 +57,7 @@ export const Route = createFileRoute("/styles/$slug")({
 
     return {
       meta: [{ title }, { name: "description", content: description }],
-      links: [{ rel: "canonical", href: `https://art.jpamorgan.com/styles/${style.slug}` }],
+      links: styleLinks(style.slug),
     };
   },
   pendingComponent: () => <FilteredGalleryPageSkeleton filter="style" />,
@@ -64,6 +65,17 @@ export const Route = createFileRoute("/styles/$slug")({
   notFoundComponent: () => <FilteredGalleryRouteState kind="style" status="not-found" />,
   component: StyleRoute,
 });
+
+function styleLinks(slug: string) {
+  return [
+    { rel: "canonical", href: `https://art.jpamorgan.com/styles/${slug}` },
+    {
+      rel: "alternate",
+      type: "text/markdown",
+      href: `https://art.jpamorgan.com/styles/${slug}.md`,
+    },
+  ];
+}
 
 function StyleRoute() {
   const { slug } = Route.useParams();

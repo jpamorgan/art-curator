@@ -25,3 +25,16 @@ export function mutationOriginGuard(origins: readonly string[]): MiddlewareHandl
 }
 
 export const favoriteMutationGuard = mutationOriginGuard;
+
+export function mcpOriginGuard(origins: readonly string[]): MiddlewareHandler {
+  const trustedOrigins = new Set(origins);
+
+  return async (context, next) => {
+    const origin = context.req.header("Origin");
+    if (origin !== undefined && !trustedOrigins.has(origin)) {
+      return context.body(null, 403);
+    }
+
+    await next();
+  };
+}

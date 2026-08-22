@@ -13,7 +13,14 @@ export const Route = createFileRoute("/artists/")({
       { title: "Artists — Art" },
       { name: "description", content: "Browse artists in the curated catalog." },
     ],
-    links: [{ rel: "canonical", href: "https://art.jpamorgan.com/artists" }],
+    links: [
+      { rel: "canonical", href: "https://art.jpamorgan.com/artists" },
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        href: "https://art.jpamorgan.com/artists.md",
+      },
+    ],
   }),
   pendingComponent: () => <BrowseIndexSkeleton kind="artists" />,
   errorComponent: () => (

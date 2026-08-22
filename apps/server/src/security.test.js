@@ -1,7 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import { Hono } from "hono";
 
-import { favoriteMutationGuard, mutationOriginGuard } from "./security";
+import { favoriteMutationGuard, mcpOriginGuard, mutationOriginGuard } from "./security";
 
 const trustedOrigins = ["https://art.jpamorgan.com", "https://api.art.jpamorgan.com"];
 
@@ -112,5 +112,44 @@ describe("public submission origin guard", () => {
       expect(response.status).toBe(expected);
     }
     expect(mutations).toBe(1);
+  });
+});
+
+describe("public MCP origin guard", () => {
+  function mcpApp() {
+    const app = new Hono();
+    app.use("/mcp", mcpOriginGuard(trustedOrigins));
+    app.on(["GET", "POST", "OPTIONS"], "/mcp", (context) => context.text("handler reached"));
+    return app;
+  }
+
+  test("allows requests without an Origin and exact trusted origins", async () => {
+    for (const origin of [undefined, ...trustedOrigins]) {
+      for (const method of ["GET", "POST", "OPTIONS"]) {
+        const response = await mcpApp().request("/mcp", {
+          method,
+          headers: origin ? { Origin: origin } : undefined,
+        });
+        expect(response.status).toBe(200);
+      }
+    }
+  });
+
+  test("rejects every method before routing when any untrusted Origin is supplied", async () => {
+    for (const origin of [
+      "null",
+      "https://attacker.example",
+      "https://art.jpamorgan.com.attacker.example",
+      "https://art.jpamorgan.com/",
+    ]) {
+      for (const method of ["GET", "POST", "OPTIONS"]) {
+        const response = await mcpApp().request("/mcp", {
+          method,
+          headers: { Origin: origin },
+        });
+        expect(response.status).toBe(403);
+        expect(await response.text()).toBe("");
+      }
+    }
   });
 });

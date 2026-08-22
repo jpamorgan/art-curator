@@ -51,6 +51,7 @@ import {
 } from "../art-contract";
 import type { Context } from "../context";
 import { protectedProcedure, publicProcedure } from "../index";
+import { buildSitemapEntries } from "../sitemap";
 
 type Database = Context["db"];
 
@@ -70,6 +71,14 @@ export type ArtworkRow = {
   gallerySlug: string;
   curatedAt: Date;
 };
+
+const sitemapEntrySchema = z.object({
+  path: z.string().startsWith("/"),
+  lastModified: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/u)
+    .nullable(),
+});
 
 export const artworkSelection = {
   id: artwork.id,
@@ -452,6 +461,66 @@ export const artworksRouter = {
           .orderBy(asc(style.sortOrder), asc(style.name)),
       ]);
       return { categories, styles };
+    }),
+
+  sitemap: publicProcedure
+    .output(z.object({ entries: z.array(sitemapEntrySchema) }))
+    .handler(async ({ context }) => {
+      const [artworkRows, artistRows, galleryRows, styleRows] = await Promise.all([
+        context.db
+          .select({
+            slug: artwork.slug,
+            lastModified: sql<
+              number | null
+            >`coalesce(${artwork.updatedAt}, ${artwork.curatedAt}, ${artwork.createdAt})`,
+          })
+          .from(artwork)
+          .orderBy(asc(artwork.slug)),
+        context.db
+          .select({
+            slug: artist.slug,
+            lastModified: sql<
+              number | null
+            >`max(coalesce(${artwork.updatedAt}, ${artwork.curatedAt}, ${artwork.createdAt}, ${artist.createdAt}))`,
+          })
+          .from(artist)
+          .leftJoin(artworkArtist, eq(artist.id, artworkArtist.artistId))
+          .leftJoin(artwork, eq(artworkArtist.artworkId, artwork.id))
+          .groupBy(artist.id)
+          .orderBy(asc(artist.slug)),
+        context.db
+          .select({
+            slug: gallery.slug,
+            lastModified: sql<
+              number | null
+            >`max(coalesce(${artwork.updatedAt}, ${artwork.curatedAt}, ${artwork.createdAt}, ${gallery.createdAt}))`,
+          })
+          .from(gallery)
+          .leftJoin(artwork, eq(gallery.id, artwork.galleryId))
+          .groupBy(gallery.id)
+          .orderBy(asc(gallery.slug)),
+        context.db
+          .select({
+            slug: style.slug,
+            lastModified: sql<
+              number | null
+            >`max(coalesce(${artwork.updatedAt}, ${artwork.curatedAt}, ${artwork.createdAt}))`,
+          })
+          .from(style)
+          .leftJoin(artworkStyle, eq(style.id, artworkStyle.styleId))
+          .leftJoin(artwork, eq(artworkStyle.artworkId, artwork.id))
+          .groupBy(style.id)
+          .orderBy(asc(style.slug)),
+      ]);
+
+      return {
+        entries: buildSitemapEntries({
+          artworks: artworkRows,
+          artists: artistRows,
+          galleries: galleryRows,
+          styles: styleRows,
+        }),
+      };
     }),
 };
 

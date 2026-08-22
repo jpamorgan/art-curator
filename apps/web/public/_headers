@@ -1,0 +1,42 @@
+/.well-known/ai-catalog.json
+  Content-Type: application/ai-catalog+json; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
+  Access-Control-Allow-Headers: Accept, If-None-Match
+  Access-Control-Expose-Headers: Content-Type, ETag
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff
+
+/.well-known/mcp/server-card.json
+  Content-Type: application/mcp-server-card+json; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
+  Access-Control-Allow-Headers: Accept, If-None-Match
+  Access-Control-Expose-Headers: Content-Type, ETag
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff
+
+/.well-known/agent-skills/index.json
+  Content-Type: application/json; charset=utf-8
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
+  Access-Control-Allow-Headers: Accept, If-None-Match
+  Access-Control-Expose-Headers: Content-Type, ETag
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff
+
+/.well-known/agent-skills/*
+  Access-Control-Allow-Origin: *
+  Access-Control-Allow-Methods: GET, HEAD, OPTIONS
+  Access-Control-Allow-Headers: Accept, If-None-Match
+  Access-Control-Expose-Headers: Content-Type, ETag
+  Cache-Control: public, max-age=300
+  X-Content-Type-Options: nosniff
+
+/*.md
+  Access-Control-Allow-Origin: *
+  X-Content-Type-Options: nosniff
+
+/llms.txt
+  Access-Control-Allow-Origin: *
+  X-Content-Type-Options: nosniff

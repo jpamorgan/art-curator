@@ -1,2 +1,24 @@
 User-agent: *
 Allow: /
+
+# Answer engines and their search indexes may crawl the public catalog.
+User-agent: GPTBot
+Allow: /
+
+User-agent: ClaudeBot
+Allow: /
+
+User-agent: PerplexityBot
+Allow: /
+
+User-agent: OAI-SearchBot
+Allow: /
+
+# Do not grant separate permission for bulk model-training crawls.
+User-agent: CCBot
+Disallow: /
+
+User-agent: ByteSpider
+Disallow: /
+
+Sitemap: https://art.jpamorgan.com/sitemap.xml

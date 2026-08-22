@@ -1,25 +1,28 @@
 {
-  "name": "Art by John Philip Morgan",
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "com.jpamorgan.art/catalog",
+  "title": "Art by John Philip Morgan",
+  "description": "Browse curated physical art with filters and an interactive MCP Apps gallery.",
   "version": "1.0.0",
-  "kind": "product",
-  "description": "A personal catalog for discovering and saving physical art, artists, galleries, and styles curated by John Philip Morgan.",
-  "serverUrl": "https://api.art.jpamorgan.com/mcp",
-  "transport": "streamable-http",
-  "instructions": "Use browse_art for public art discovery. It requires no authentication and never changes catalog or user data.",
+  "websiteUrl": "https://art.jpamorgan.com/",
+  "repository": {
+    "url": "https://github.com/jpamorgan/art-curator",
+    "source": "github",
+    "subfolder": "apps/server"
+  },
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://api.art.jpamorgan.com/mcp"
+    }
+  ],
   "capabilities": {
     "tools": true,
-    "resources": true
-  },
-  "tools": [
-    {
-      "name": "browse_art",
-      "description": "Use this when someone wants to discover, browse, compare, or discuss curated physical artworks in the public Art by John Philip Morgan catalog.",
-      "annotations": {
-        "readOnlyHint": true,
-        "destructiveHint": false,
-        "idempotentHint": true,
-        "openWorldHint": false
+    "resources": true,
+    "extensions": {
+      "io.modelcontextprotocol/ui": {
+        "mimeTypes": ["text/html;profile=mcp-app"]
       }
     }
-  ]
+  }
 }

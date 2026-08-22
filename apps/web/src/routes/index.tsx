@@ -71,7 +71,14 @@ export const Route = createFileRoute("/")({
       { property: "og:url", content: "https://art.jpamorgan.com/" },
       { name: "twitter:card", content: "summary" },
     ],
-    links: [{ rel: "canonical", href: "https://art.jpamorgan.com/" }],
+    links: [
+      { rel: "canonical", href: "https://art.jpamorgan.com/" },
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        href: "https://art.jpamorgan.com/index.md",
+      },
+    ],
   }),
   pendingComponent: GalleryPageSkeleton,
   errorComponent: () => (

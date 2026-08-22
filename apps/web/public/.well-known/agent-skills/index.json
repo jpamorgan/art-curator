@@ -1,0 +1,12 @@
+{
+  "$schema": "https://schemas.agentskills.io/discovery/0.2.0/schema.json",
+  "skills": [
+    {
+      "name": "browse-art",
+      "type": "skill-md",
+      "description": "Browse John Philip Morgan's public art catalog and filter artworks by artist, gallery, style, or category through its read-only MCP server.",
+      "url": "/.well-known/agent-skills/browse-art/SKILL.md",
+      "digest": "sha256:3e25064b8b3d8cf4acff22545c48e91257242b7f2983efbe7fab16ab36ca6c8c"
+    }
+  ]
+}

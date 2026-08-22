@@ -10,7 +10,14 @@ export const Route = createFileRoute("/styles/")({
     context.queryClient.ensureQueryData(context.orpc.styles.list.queryOptions()),
   head: () => ({
     meta: [{ title: "Styles — Art" }, { name: "description", content: "Browse art by style." }],
-    links: [{ rel: "canonical", href: "https://art.jpamorgan.com/styles" }],
+    links: [
+      { rel: "canonical", href: "https://art.jpamorgan.com/styles" },
+      {
+        rel: "alternate",
+        type: "text/markdown",
+        href: "https://art.jpamorgan.com/styles.md",
+      },
+    ],
   }),
   pendingComponent: () => <BrowseIndexSkeleton kind="styles" />,
   errorComponent: () => (

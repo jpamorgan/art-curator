@@ -1,12 +1,11 @@
 import { beforeAll, describe, expect, test } from "bun:test";
 
 import {
+  ART_MCP_APPS_EXTENSION_ID,
+  ART_MCP_APPS_MIME_TYPE,
   ART_MCP_ENDPOINT,
-  ART_MCP_INSTRUCTIONS,
+  ART_MCP_SERVER_NAME,
   ART_MCP_SERVER_VERSION,
-  ART_MCP_TRANSPORT,
-  BROWSE_ART_DESCRIPTION,
-  BROWSE_ART_TOOL_NAME,
 } from "./mcp";
 
 const publicRoot = new URL("../../web/public/", import.meta.url);
@@ -30,28 +29,29 @@ beforeAll(async () => {
 describe("crawler-visible MCP discovery", () => {
   test("publishes a server card aligned with the live MCP contract", () => {
     expect(serverCard).toMatchObject({
-      name: "Art by John Philip Morgan",
+      $schema: "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+      name: ART_MCP_SERVER_NAME,
+      title: "Art by John Philip Morgan",
       version: ART_MCP_SERVER_VERSION,
-      kind: "product",
-      serverUrl: ART_MCP_ENDPOINT,
-      transport: ART_MCP_TRANSPORT,
-      instructions: ART_MCP_INSTRUCTIONS,
-      capabilities: { tools: true, resources: true },
-    });
-    expect(serverCard.url).toBeUndefined();
-    expect(serverCard.icon).toBeUndefined();
-    expect(serverCard.tools).toEqual([
-      {
-        name: BROWSE_ART_TOOL_NAME,
-        description: BROWSE_ART_DESCRIPTION,
-        annotations: {
-          readOnlyHint: true,
-          destructiveHint: false,
-          idempotentHint: true,
-          openWorldHint: false,
+      websiteUrl: "https://art.jpamorgan.com/",
+      remotes: [
+        {
+          type: "streamable-http",
+          url: ART_MCP_ENDPOINT,
+        },
+      ],
+      capabilities: {
+        tools: true,
+        resources: true,
+        extensions: {
+          [ART_MCP_APPS_EXTENSION_ID]: {
+            mimeTypes: [ART_MCP_APPS_MIME_TYPE],
+          },
         },
       },
-    ]);
+    });
+    expect(serverCard.description.length).toBeLessThanOrEqual(100);
+    expect(serverCard.tools).toBeUndefined();
   });
 
   test("links the server card and endpoint from llms.txt", () => {

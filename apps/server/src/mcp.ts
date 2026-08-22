@@ -1,4 +1,5 @@
 import {
+  EXTENSION_ID,
   registerAppResource,
   registerAppTool,
   RESOURCE_MIME_TYPE,
@@ -10,7 +11,10 @@ import { z } from "zod";
 export const ART_WIDGET_URI = "ui://art-curator/browse-art/v1.html";
 export const ART_MCP_ENDPOINT = "https://api.art.jpamorgan.com/mcp";
 export const ART_MCP_TRANSPORT = "streamable-http";
+export const ART_MCP_SERVER_NAME = "com.jpamorgan.art/catalog";
 export const ART_MCP_SERVER_VERSION = "1.0.0";
+export const ART_MCP_APPS_EXTENSION_ID = EXTENSION_ID;
+export const ART_MCP_APPS_MIME_TYPE = RESOURCE_MIME_TYPE;
 export const BROWSE_ART_TOOL_NAME = "browse_art";
 export const BROWSE_ART_DESCRIPTION =
   "Use this when someone wants to discover, browse, compare, or discuss curated physical artworks in the public Art by John Philip Morgan catalog.";
@@ -71,6 +75,45 @@ export type McpDependencies = {
   assetOrigin: string;
   browseArt(input: BrowseArtInput): Promise<BrowseArtResult[]>;
 };
+
+const TEXT_FALLBACK_LIMIT = 6_000;
+
+function singleLine(value: string, limit: number, fallback: string): string {
+  const normalized = value.replace(/\s+/g, " ").trim();
+  if (!normalized) return fallback;
+  return normalized.length <= limit ? normalized : `${normalized.slice(0, limit - 1)}…`;
+}
+
+export function formatBrowseArtText(artworks: readonly BrowseArtResult[]): string {
+  if (artworks.length === 0) return "No curated artworks matched those filters.";
+
+  const heading = `Found ${artworks.length} curated artwork${artworks.length === 1 ? "" : "s"}.`;
+  const sections = [heading];
+  let length = heading.length;
+  let listed = 0;
+
+  for (const [index, artwork] of artworks.slice(0, 12).entries()) {
+    const title = singleLine(artwork.title, 120, "Untitled");
+    const artist = singleLine(artwork.artist, 100, "Unknown artist");
+    const date = singleLine(artwork.date, 40, "Date unknown");
+    const gallery = singleLine(artwork.gallery, 120, "Gallery unknown");
+    const url = singleLine(artwork.url, 240, "Canonical URL unavailable");
+    const section = `${index + 1}. ${title} — ${artist}\n   ${date} · ${gallery}\n   ${url}`;
+
+    if (length + section.length + 2 > TEXT_FALLBACK_LIMIT) break;
+    sections.push(section);
+    length += section.length + 2;
+    listed += 1;
+  }
+
+  if (listed < artworks.length) {
+    sections.push(
+      `Additional results omitted from the text fallback (${artworks.length - listed}).`,
+    );
+  }
+
+  return sections.join("\n\n");
+}
 
 function normalizeAssetOrigin(value: string): string {
   const url = new URL(value);
@@ -234,6 +277,11 @@ export const artWidgetHtml = `<!doctype html>
         const stateCopy = document.getElementById("state-copy");
         const count = document.getElementById("count");
         const pending = new Map();
+        const requestIdPrefix = "art-view-" + (
+          globalThis.crypto && typeof globalThis.crypto.randomUUID === "function"
+            ? globalThis.crypto.randomUUID()
+            : Date.now().toString(36) + "-" + Math.random().toString(36).slice(2)
+        ) + "-";
         const allowedColorTokens = new Set([
           "--color-background-primary",
           "--color-background-secondary",
@@ -260,7 +308,7 @@ export const artWidgetHtml = `<!doctype html>
         const send = (message) => window.parent.postMessage(message, "*");
         const notify = (method, params = {}) => send({ jsonrpc: "2.0", method, params });
         const request = (method, params) => new Promise((resolve, reject) => {
-          const id = nextId++;
+          const id = requestIdPrefix + String(nextId++);
           const timeout = window.setTimeout(() => {
             pending.delete(id);
             reject(new Error("The host did not respond."));
@@ -400,11 +448,35 @@ export const artWidgetHtml = `<!doctype html>
           reportSize();
         };
 
-        window.addEventListener("message", (event) => {
+        const teardown = () => {
+          initialized = false;
+          for (const entry of pending.values()) {
+            window.clearTimeout(entry.timeout);
+            entry.reject(new Error("The host closed this view."));
+          }
+          pending.clear();
+          window.removeEventListener("message", handleMessage);
+        };
+        const handleMessage = (event) => {
           if (event.source !== window.parent) return;
           const message = event.data;
           if (!message || message.jsonrpc !== "2.0") return;
-          if (message.id !== undefined && pending.has(message.id)) {
+          if (message.method === "ui/resource-teardown") {
+            if (message.id !== undefined) {
+              send({ jsonrpc: "2.0", id: message.id, result: {} });
+            }
+            teardown();
+            return;
+          }
+          if (message.method === "ping") {
+            if (message.id !== undefined) {
+              send({ jsonrpc: "2.0", id: message.id, result: {} });
+            }
+            return;
+          }
+          const isResponse = message.method === undefined && message.id !== undefined
+            && (Object.hasOwn(message, "result") || Object.hasOwn(message, "error"));
+          if (isResponse && pending.has(message.id)) {
             const entry = pending.get(message.id);
             pending.delete(message.id);
             window.clearTimeout(entry.timeout);
@@ -417,7 +489,8 @@ export const artWidgetHtml = `<!doctype html>
             showState("Request cancelled", text(message.params && message.params.reason, "The host cancelled this request."));
           }
           if (message.method === "ui/notifications/host-context-changed") applyHostContext(message.params);
-        }, { passive: true });
+        };
+        window.addEventListener("message", handleMessage, { passive: true });
 
         request("ui/initialize", {
           appInfo: { name: "Art by John Philip Morgan Gallery", version: "1.0.0" },
@@ -447,11 +520,18 @@ export function createArtMcpServer(dependencies: McpDependencies): McpServer {
     "openai/widgetDescription": WIDGET_DESCRIPTION,
   };
   const server = new McpServer(
-    { name: "art-by-john-philip-morgan", version: ART_MCP_SERVER_VERSION },
+    { name: ART_MCP_SERVER_NAME, version: ART_MCP_SERVER_VERSION },
     {
       instructions: ART_MCP_INSTRUCTIONS,
     },
   );
+  server.server.registerCapabilities({
+    extensions: {
+      [ART_MCP_APPS_EXTENSION_ID]: {
+        mimeTypes: [ART_MCP_APPS_MIME_TYPE],
+      },
+    },
+  });
 
   registerAppResource(
     server,
@@ -505,10 +585,7 @@ export function createArtMcpServer(dependencies: McpDependencies): McpServer {
           content: [
             {
               type: "text",
-              text:
-                artworks.length === 0
-                  ? "No curated artworks matched those filters."
-                  : `Found ${artworks.length} curated artwork${artworks.length === 1 ? "" : "s"}.`,
+              text: formatBrowseArtText(artworks),
             },
           ],
         };

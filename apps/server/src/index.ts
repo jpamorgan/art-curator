@@ -27,37 +27,47 @@ import {
 } from "./enrichment";
 import { createEnrichmentProvider } from "./enrichment-provider";
 import { handleMcpRequest } from "./mcp";
+import { handleMcpHttpDiscoveryRequest } from "./mcp-http-discovery";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
-import { favoriteMutationGuard, mutationOriginGuard } from "./security";
+import { favoriteMutationGuard, mcpOriginGuard, mutationOriginGuard } from "./security";
 import {
   handleCreateSubmissionRequest,
   handleListSubmissionsRequest,
   handleRemoveSubmissionRequest,
 } from "./submissions";
 
-const app = new Hono();
+export const app = new Hono();
 const enrichmentConfig = resolveEnrichmentModelConfig({
   ENRICHMENT_PROVIDER: env.ENRICHMENT_PROVIDER,
   ENRICHMENT_VISION_MODEL: env.ENRICHMENT_VISION_MODEL,
   ENRICHMENT_EMBEDDING_MODEL: env.ENRICHMENT_EMBEDDING_MODEL,
   ENRICHMENT_PROMPT_VERSION: env.ENRICHMENT_PROMPT_VERSION,
 });
+const security = authSecurityOptions(env);
 app.use(logger());
-app.use(
-  "/*",
-  cors({
-    origin: env.CORS_ORIGIN,
-    allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowHeaders: [
-      "Content-Type",
-      "Authorization",
-      "MCP-Protocol-Version",
-      "Mcp-Session-Id",
-      "Last-Event-ID",
-    ],
-    exposeHeaders: ["MCP-Protocol-Version", "Mcp-Session-Id"],
-    credentials: true,
-  }),
+app.use("/mcp", mcpOriginGuard(security.trustedOrigins));
+const corsOptions = {
+  origin: security.trustedOrigins,
+  allowHeaders: [
+    "Content-Type",
+    "Authorization",
+    "MCP-Protocol-Version",
+    "Mcp-Session-Id",
+    "Last-Event-ID",
+  ],
+  exposeHeaders: ["MCP-Protocol-Version", "Mcp-Session-Id"],
+  credentials: true,
+};
+const defaultCors = cors({
+  ...corsOptions,
+  allowMethods: ["GET", "HEAD", "POST", "DELETE", "OPTIONS"],
+});
+const mcpCors = cors({
+  ...corsOptions,
+  allowMethods: ["GET", "HEAD", "POST", "OPTIONS"],
+});
+app.use("/*", (context, next) =>
+  context.req.path === "/mcp" ? mcpCors(context, next) : defaultCors(context, next),
 );
 
 app.post("/mcp", (c) =>
@@ -87,16 +97,7 @@ app.post("/mcp", (c) =>
     },
   }),
 );
-app.on(["GET", "DELETE"], "/mcp", () =>
-  Response.json(
-    {
-      jsonrpc: "2.0",
-      error: { code: -32000, message: "Method not allowed. Send MCP requests with POST." },
-      id: null,
-    },
-    { status: 405, headers: { Allow: "POST" } },
-  ),
-);
+app.on(["GET", "HEAD", "DELETE"], "/mcp", (c) => handleMcpHttpDiscoveryRequest(c.req.raw));
 
 app.on(["GET", "HEAD"], "/artifacts/:artworkId/:filename", (c) => {
   const db = createDb();
@@ -153,7 +154,7 @@ app.post("/internal/artifact-sync", (c) =>
   }),
 );
 
-const guardSubmissionMutation = mutationOriginGuard(authSecurityOptions(env).trustedOrigins);
+const guardSubmissionMutation = mutationOriginGuard(security.trustedOrigins);
 app.use("/submissions", guardSubmissionMutation);
 app.post("/submissions", (c) =>
   handleCreateSubmissionRequest(c.req.raw, {
@@ -179,7 +180,7 @@ app.get("/internal/artworks", (c) =>
   }),
 );
 
-const guardFavoriteMutation = favoriteMutationGuard(authSecurityOptions(env).trustedOrigins);
+const guardFavoriteMutation = favoriteMutationGuard(security.trustedOrigins);
 for (const path of [
   "/rpc/favorites/toggle",
   "/api-reference/favorites/toggle",

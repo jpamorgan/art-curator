@@ -91,6 +91,9 @@ describe("crawler-visible site identity", () => {
     expect(instructions).toContain("https://api.art.jpamorgan.com/mcp");
     expect(instructions).toContain("`browse_art` tool");
     expect(instructions).toContain("individual John Philip Morgan");
-    expect(robots).toBe("User-agent: *\nAllow: /\n");
+    expect(robots).toContain("User-agent: *\nAllow: /");
+    expect(robots).toContain("User-agent: OAI-SearchBot\nAllow: /");
+    expect(robots).toContain("User-agent: CCBot\nDisallow: /");
+    expect(robots).toContain("Sitemap: https://art.jpamorgan.com/sitemap.xml");
   });
 });

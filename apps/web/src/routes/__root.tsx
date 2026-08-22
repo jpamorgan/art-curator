@@ -89,6 +89,18 @@ function RootApp() {
           Styles
         </Link>
         <a
+          href="/llms.txt"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
+        >
+          Agent guide
+        </a>
+        <a
+          href="https://github.com/jpamorgan/art-curator"
+          className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
+        >
+          Source
+        </a>
+        <a
           href="https://unavatar.io"
           className="inline-flex min-h-12 items-center rounded-lg px-2.5 text-base text-neutral-600 hover:text-neutral-950 focus-visible:outline-2 focus-visible:outline-offset-0 focus-visible:outline-solid focus-visible:outline-neutral-950 sm:text-sm lg:min-h-10"
         >
