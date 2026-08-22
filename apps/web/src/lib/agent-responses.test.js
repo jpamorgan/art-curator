@@ -89,7 +89,21 @@ describe("agent-facing responses", () => {
     expect(body.endpoints.mcp.url).toBe("https://api.art.jpamorgan.com/mcp");
     expect(body.access.browsing.authentication).toBe("none");
     expect(body.discovery.authentication).toBe("https://art.jpamorgan.com/auth.md");
-    expect(body.discovery.agentCard).toBeUndefined();
+    expect(body.discovery.agentCard).toBe("https://art.jpamorgan.com/.well-known/agent-card.json");
+    expect(body.discovery.oauthProtectedResource).toBe(
+      "https://api.art.jpamorgan.com/.well-known/oauth-protected-resource",
+    );
+    expect(body.endpoints.a2a).toMatchObject({
+      url: "https://api.art.jpamorgan.com/a2a",
+      protocolBinding: "JSONRPC",
+      protocolVersion: "1.0",
+      authentication: "none",
+    });
+    expect(body.endpoints.protectedCatalog).toMatchObject({
+      url: "https://api.art.jpamorgan.com/agent/catalog",
+      authentication: "oauth2",
+      scope: "art:read",
+    });
     expect(body.sourceRepository).toBe("https://github.com/jpamorgan/art-curator");
   });
 

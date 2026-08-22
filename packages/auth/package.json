@@ -16,6 +16,7 @@
   "dependencies": {
     "@art/db": "workspace:*",
     "@art/env": "workspace:*",
+    "@better-auth/oauth-provider": "1.6.25",
     "better-auth": "catalog:",
     "dotenv": "catalog:",
     "zod": "catalog:"

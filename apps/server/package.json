@@ -9,6 +9,7 @@
     "compile": "bun build --compile --minify --sourcemap --bytecode ./src/index.ts --outfile server"
   },
   "dependencies": {
+    "@a2a-js/sdk": "1.0.1",
     "@art/api": "workspace:*",
     "@art/auth": "workspace:*",
     "@art/db": "workspace:*",

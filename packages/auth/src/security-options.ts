@@ -21,6 +21,10 @@ export function authSecurityOptions(environment: AuthRuntimeEnvironment) {
       max: 100,
       customRules: {
         "/get-session": false as const,
+        "/oauth2/register": {
+          window: 60 * 60,
+          max: 20,
+        },
       },
     },
     ipAddressHeaders: ["cf-connecting-ip"],

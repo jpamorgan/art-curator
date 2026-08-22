@@ -32,14 +32,17 @@ describe("public agent discovery artifacts", () => {
   });
 
   test("publishes a schema-shaped ARD catalog backed by a resolvable server card", async () => {
-    const [catalogText, cardText, headers] = await Promise.all([
+    const [catalogText, cardText, agentCardText, headers] = await Promise.all([
       readPublicFile(".well-known/ai-catalog.json"),
       readPublicFile(".well-known/mcp/server-card.json"),
+      readPublicFile(".well-known/agent-card.json"),
       readPublicFile("_headers"),
     ]);
     const catalog = JSON.parse(catalogText);
     const card = JSON.parse(cardText);
-    const entry = catalog.entries[0];
+    const agentCard = JSON.parse(agentCardText);
+    const entry = catalog.entries.find((item) => item.identifier.includes(":mcp:"));
+    const a2aEntry = catalog.entries.find((item) => item.identifier.includes(":a2a:"));
 
     expect(catalog.specVersion).toBe("1.0");
     expect(catalog.host.identifier).toBe("art.jpamorgan.com");
@@ -58,9 +61,24 @@ describe("public agent discovery artifacts", () => {
         url: "https://api.art.jpamorgan.com/mcp",
       },
     ]);
+    expect(a2aEntry.type).toBe("application/a2a-agent-card+json");
+    expect(a2aEntry.url).toBe("https://art.jpamorgan.com/.well-known/agent-card.json");
+    expect(agentCard.supportedInterfaces).toEqual([
+      {
+        url: "https://api.art.jpamorgan.com/a2a",
+        protocolBinding: "JSONRPC",
+        protocolVersion: "1.0",
+        tenant: "",
+      },
+    ]);
+    expect(agentCard.securityRequirements).toEqual([]);
+    expect(agentCard.skills[0].id).toBe("browse-art-catalog");
     expect(card.tools).toBeUndefined();
     expect(headers).toContain(
       "/.well-known/mcp/server-card.json\n  Content-Type: application/mcp-server-card+json; charset=utf-8",
+    );
+    expect(headers).toContain(
+      "/.well-known/agent-card.json\n  Content-Type: application/a2a-agent-card+json; charset=utf-8",
     );
     expect(headers).toContain("/.well-known/agent-skills/browse-art/SKILL.md");
     expect(headers).not.toContain("/.well-known/agent-skills/*");
@@ -79,6 +97,7 @@ describe("public agent discovery artifacts", () => {
     expect(skill.description.length).toBeGreaterThan(40);
     expect(skill.url).toBe("/.well-known/agent-skills/browse-art/SKILL.md");
     expect(skill.digest).toBe(`sha256:${digest}`);
+    expect(skillText.match(/^description: (.+)$/mu)?.[1]).toBe(skill.description);
     expect(skillText).toContain("name: browse-art");
     expect(skillText).toContain("https://api.art.jpamorgan.com/mcp");
   });
@@ -109,7 +128,7 @@ describe("public agent discovery artifacts", () => {
       expect(auth).toContain(heading);
     }
     for (const keyword of [
-      "agent_auth",
+      "agent_oauth",
       "register_uri",
       "identity_assertion",
       "id-jag",
@@ -117,7 +136,11 @@ describe("public agent discovery artifacts", () => {
     ]) {
       expect(auth).toContain(keyword);
     }
-    expect(auth).toContain("No agent registration is required or supported.");
+    expect(auth).toContain("oauth2_public_client");
+    expect(auth).toContain("authorization code flow with PKCE");
+    expect(auth).toContain("https://api.art.jpamorgan.com/.well-known/oauth-protected-resource");
+    expect(auth).toContain("ID-JAG assertion type");
+    expect(auth).toContain("not advertised or accepted");
   });
 
   test("keeps llms.txt links on resolvable discovery surfaces", async () => {
@@ -129,6 +152,10 @@ describe("public agent discovery artifacts", () => {
     expect(instructions).toContain("https://github.com/jpamorgan/art-curator");
     expect(instructions).toContain("AGENTS.md");
     expect(instructions).toContain("](https://api.art.jpamorgan.com/mcp)");
+    expect(instructions).toContain("](https://api.art.jpamorgan.com/a2a)");
+    expect(instructions).toContain(
+      "](https://api.art.jpamorgan.com/.well-known/oauth-protected-resource)",
+    );
     expect(markdownLinks.length).toBeGreaterThan(5);
     expect(new Set(markdownLinks).size).toBe(markdownLinks.length);
   });

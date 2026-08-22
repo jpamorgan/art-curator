@@ -228,4 +228,114 @@ describe("Worker module startup", () => {
     expect(exitCode).toBe(0);
     expect(stdout).toContain("mcp-production-origins-ok");
   });
+
+  test("composes A2A and OAuth discovery routes without advertising unsupported auth", async () => {
+    const moduleUrl = new URL("./index.ts", import.meta.url).href;
+    const script = `
+      import { mock } from "bun:test";
+      mock.module("cloudflare:workers", () => ({
+        env: {
+          ENRICHMENT_PROVIDER: "cloudflare",
+          ENRICHMENT_VISION_MODEL: "vision",
+          ENRICHMENT_EMBEDDING_MODEL: "embedding",
+          ENRICHMENT_PROMPT_VERSION: "v1",
+          CORS_ORIGIN: "https://art.jpamorgan.com",
+          BETTER_AUTH_URL: "https://api.art.jpamorgan.com",
+          BETTER_AUTH_SECRET: "test-secret"
+        }
+      }));
+      const { app } = await import(${JSON.stringify(moduleUrl)});
+
+      const cardResponse = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/.well-known/agent-card.json")
+      );
+      const card = await cardResponse.json();
+      if (
+        cardResponse.status !== 200 ||
+        card.supportedInterfaces[0].url !== "https://api.art.jpamorgan.com/a2a" ||
+        card.supportedInterfaces[0].protocolVersion !== "1.0" ||
+        card.securityRequirements.length !== 0
+      ) {
+        throw new Error("The live A2A route does not serve its v1.0 anonymous agent card");
+      }
+
+      const protectedResponse = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/.well-known/oauth-protected-resource")
+      );
+      const protectedMetadata = await protectedResponse.json();
+      if (
+        protectedMetadata.resource !== "https://api.art.jpamorgan.com/agent/catalog" ||
+        protectedMetadata.authorization_servers[0] !== "https://api.art.jpamorgan.com" ||
+        protectedMetadata.scopes_supported[0] !== "art:read"
+      ) {
+        throw new Error("RFC 9728 metadata is not cross-linked to the protected catalog");
+      }
+      if (
+        protectedResponse.headers.get("access-control-allow-origin") !== "*" ||
+        protectedResponse.headers.has("access-control-allow-credentials")
+      ) {
+        throw new Error("Public OAuth metadata has an invalid credentialed wildcard CORS policy");
+      }
+
+      const challenge = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/agent/catalog")
+      );
+      if (
+        challenge.status !== 401 ||
+        !challenge.headers.get("www-authenticate")?.includes("oauth-protected-resource")
+      ) {
+        throw new Error("The protected catalog does not expose RFC 9728 discovery");
+      }
+
+      const a2aGet = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/a2a", {
+          headers: { Origin: "https://art.jpamorgan.com" }
+        })
+      );
+      if (a2aGet.status !== 405 || a2aGet.headers.get("a2a-version") !== "1.0") {
+        throw new Error("The A2A transport route is not wired to the v1 handler");
+      }
+      const a2aAttack = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/a2a", {
+          method: "POST",
+          headers: {
+            Origin: "https://attacker.example",
+            "Content-Type": "application/json"
+          },
+          body: "{}"
+        })
+      );
+      if (a2aAttack.status !== 403) {
+        throw new Error("The A2A transport accepted an untrusted browser origin");
+      }
+
+      const registrationAttack = await app.fetch(
+        new Request("https://api.art.jpamorgan.com/agent/identity", {
+          method: "POST",
+          headers: {
+            Origin: "https://attacker.example",
+            "Content-Type": "application/json"
+          },
+          body: "{}"
+        })
+      );
+      if (registrationAttack.status !== 403) {
+        throw new Error("Agent client registration accepted an untrusted browser origin");
+      }
+
+      console.log("agent-protocol-routes-ok");
+    `;
+    const child = Bun.spawn([process.execPath, "-e", script], {
+      stdout: "pipe",
+      stderr: "pipe",
+    });
+    const [exitCode, stdout, stderr] = await Promise.all([
+      child.exited,
+      new Response(child.stdout).text(),
+      new Response(child.stderr).text(),
+    ]);
+    expect(stderr).toBe("");
+    expect(exitCode).toBe(0);
+    expect(stdout).toContain("agent-protocol-routes-ok");
+  });
 });

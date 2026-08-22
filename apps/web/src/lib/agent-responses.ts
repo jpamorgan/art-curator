@@ -91,6 +91,13 @@ export const agentView = {
       authentication: "none",
       description: "Catalog browsing, artwork details, and MCP browse_art are public.",
     },
+    authenticatedAgentCatalog: {
+      authentication: "oauth2-authorization-code-pkce",
+      scope: "art:read",
+      description:
+        "The protected JSON catalog uses a dynamically registered public OAuth client and interactive user consent.",
+      instructions: `${SITE_URL}auth.md`,
+    },
     personalization: {
       authentication: "session",
       description:
@@ -104,6 +111,18 @@ export const agentView = {
       description: "Browse public artwork cards and filter by category, style, gallery, or artist.",
       access: "anonymous",
       transports: ["mcp-streamable-http", "orpc-http"],
+    },
+    {
+      id: "browse_art_a2a",
+      description: "Browse the public catalog through an A2A v1.0 task lifecycle and artifact.",
+      access: "anonymous",
+      transports: ["a2a-jsonrpc", "sse"],
+    },
+    {
+      id: "read_agent_catalog",
+      description: "Read structured artwork pages with an audience-bound art:read access token.",
+      access: "oauth2-art:read",
+      transports: ["https"],
     },
     {
       id: "read_artwork_page",
@@ -129,13 +148,33 @@ export const agentView = {
       method: "POST",
       authentication: "none",
     },
+    a2a: {
+      url: `${API_ORIGIN}/a2a`,
+      protocolBinding: "JSONRPC",
+      protocolVersion: "1.0",
+      authentication: "none",
+    },
+    protectedCatalog: {
+      url: `${API_ORIGIN}/agent/catalog`,
+      method: "GET",
+      authentication: "oauth2",
+      scope: "art:read",
+    },
+    agentRegistration: {
+      url: `${API_ORIGIN}/agent/identity`,
+      method: "POST",
+      type: "oauth2_public_client",
+    },
   },
   discovery: {
     llms: `${SITE_URL}llms.txt`,
     aiCatalog: `${SITE_URL}.well-known/ai-catalog.json`,
     agentSkills: `${SITE_URL}.well-known/agent-skills/index.json`,
     mcpServerCard: `${SITE_URL}.well-known/mcp/server-card.json`,
+    agentCard: `${SITE_URL}.well-known/agent-card.json`,
     authentication: `${SITE_URL}auth.md`,
+    oauthProtectedResource: `${API_ORIGIN}/.well-known/oauth-protected-resource`,
+    oauthAuthorizationServer: `${API_ORIGIN}/.well-known/oauth-authorization-server`,
     sitemap: `${SITE_URL}sitemap.xml`,
   },
   canonicalPages: [

@@ -16,6 +16,9 @@ const migrationFiles = [
   "0008_add_works_on_paper_category.sql",
   "0009_early_naoko.sql",
   "0010_volatile_jamie_braddock.sql",
+  "0011_mysterious_black_tom.sql",
+  "0012_omniscient_tyger_tiger.sql",
+  "0013_whole_wild_child.sql",
 ];
 const databases = [];
 
@@ -201,6 +204,17 @@ describe("historical D1 migrations", () => {
         .all()
         .map(({ name }) => name),
     ).toEqual(["id", "key", "count", "last_request"]);
+    for (const table of [
+      "jwks",
+      "oauth_client",
+      "oauth_refresh_token",
+      "oauth_access_token",
+      "oauth_consent",
+      "oauth_agent_access_token_revocation",
+      "a2a_task",
+    ]) {
+      expect(database.query(`PRAGMA table_info(${table})`).all().length).toBeGreaterThan(0);
+    }
     expect(
       database
         .query("PRAGMA table_info(art_inbox)")

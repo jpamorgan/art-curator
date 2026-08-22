@@ -1,8 +1,21 @@
 import { getSafeReturnTo } from "@/lib/safe-return-to";
 
 type AuthActionResult = {
+  data?: unknown;
   error?: { message?: string } | null;
 };
+
+function hasOAuthRedirect(data: unknown): data is { redirect: true; url: string } {
+  return (
+    typeof data === "object" &&
+    data !== null &&
+    "redirect" in data &&
+    data.redirect === true &&
+    "url" in data &&
+    typeof data.url === "string" &&
+    data.url.length > 0
+  );
+}
 
 type InternalNavigate = (options: {
   to: string;
@@ -47,6 +60,10 @@ export async function authenticateAndNavigate({
     return fallbackError;
   }
   if (result.error) return result.error.message || fallbackError;
+  // Better Auth's OAuth provider has already validated this redirect and its
+  // client hook owns the top-level navigation. Do not race it with an internal
+  // post-login navigation.
+  if (hasOAuthRedirect(result.data)) return null;
 
   if (!(await confirmSession())) {
     return "Signed in, but your session is taking longer than expected. Try again.";

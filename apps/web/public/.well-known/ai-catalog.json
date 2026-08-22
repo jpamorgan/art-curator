@@ -20,6 +20,21 @@
         "Compare a small selection of works in this catalog."
       ],
       "version": "1.0.0"
+    },
+    {
+      "identifier": "urn:air:art.jpamorgan.com:a2a:art-catalog",
+      "displayName": "Art catalog A2A agent",
+      "type": "application/a2a-agent-card+json",
+      "url": "https://art.jpamorgan.com/.well-known/agent-card.json",
+      "description": "Anonymous A2A v1.0 task interface for browsing the public physical-art catalog through JSON-RPC and SSE streaming.",
+      "tags": ["art", "artwork", "discovery", "catalog", "a2a"],
+      "capabilities": ["browse_art_catalog", "filter_artworks", "stream_task_updates"],
+      "representativeQueries": [
+        "Show me six recent artworks.",
+        "Browse works by an artist or style slug.",
+        "Return a structured artifact containing matching artwork links."
+      ],
+      "version": "1.0.0"
     }
   ]
 }

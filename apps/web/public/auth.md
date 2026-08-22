@@ -1,31 +1,72 @@
-# Art agent access
+# Art agent authentication
 
-Art by John Philip Morgan exposes a public, read-only art catalog. Agents can browse it without a credential through the MCP server described at <https://art.jpamorgan.com/.well-known/mcp/server-card.json>. Saved works, follows, submissions, and personalized recommendations are interactive user features; they require a person to sign in through the website and are not authorized for autonomous agent access.
+Art by John Philip Morgan has two read-only agent surfaces. The public MCP and A2A catalog interfaces need no credential. The protected catalog at `https://api.art.jpamorgan.com/agent/catalog` uses OAuth 2.1 authorization code flow with PKCE, dynamically registered public clients, and the `art:read` scope. The resource and authorization server share `https://api.art.jpamorgan.com`.
 
 ## Discover
 
-Fetch the MCP server card and the Agent Skills index at <https://art.jpamorgan.com/.well-known/agent-skills/index.json>. The public MCP endpoint does not return a `WWW-Authenticate` challenge because its advertised catalog tool is anonymous and read-only. Art does not publish RFC 9728 Protected Resource Metadata or an OAuth `agent_auth` extension for this surface.
+Request the protected catalog without a token to receive:
+
+```http
+HTTP/1.1 401 Unauthorized
+WWW-Authenticate: Bearer resource_metadata="https://api.art.jpamorgan.com/.well-known/oauth-protected-resource"
+```
+
+Fetch that RFC 9728 document, follow its `authorization_servers` entry to `https://api.art.jpamorgan.com/.well-known/oauth-authorization-server`, and read the standard `authorization_endpoint`, `token_endpoint`, `registration_endpoint`, `revocation_endpoint`, scopes, grant types, and PKCE methods. Its service-specific `agent_oauth` block points back to this guide and publishes the convenience `register_uri` at `https://api.art.jpamorgan.com/agent/identity`.
 
 ## Pick a method
 
-Use the public method with no `Authorization` header. There is no agent registration method to select: `anonymous` registration, `identity_assertion`, and the ID-JAG assertion type `urn:ietf:params:oauth:token-type:id-jag` are not accepted. A browser login session must not be copied into an agent request.
+- For public catalog conversation and visual browsing, use MCP at `https://api.art.jpamorgan.com/mcp` or A2A at `https://api.art.jpamorgan.com/a2a`; both are anonymous and accept no credential.
+- For the protected JSON catalog, dynamically register an `oauth2_public_client`, then use authorization code flow with PKCE. Registration needs no pre-existing credential, but a person still signs in and approves requested scopes at the authorization endpoint.
+- The service-specific `agent_oauth` object is not the WorkOS `agent_auth` identity-assertion protocol. `identity_assertion`, the ID-JAG assertion type `urn:ietf:params:oauth:token-type:id-jag`, and an auth.md `claim_token` exchange are not advertised or accepted. Do not invent those fields.
 
 ## Register
 
-No agent registration is required or supported. There is no `register_uri`, identity endpoint, client secret, API key, or token exchange for public catalog browsing. Do not submit user identity or credentials to the MCP endpoint.
+Create a native public OAuth client through `agent_oauth.register_uri`. Supply one to ten exact redirect URIs. Loopback redirects may choose an available local port.
+
+```http
+POST /agent/identity HTTP/1.1
+Host: api.art.jpamorgan.com
+Content-Type: application/json
+```
+
+```json
+{
+  "type": "oauth2_public_client",
+  "client_name": "My art research agent",
+  "application_type": "native",
+  "redirect_uris": ["http://127.0.0.1:49152/callback"],
+  "scope": "offline_access art:read"
+}
+```
+
+A successful RFC 7591 response returns `client_id`, `redirect_uris`, `scope`, and `token_endpoint_auth_method: "none"`. It does not return a `client_secret`. Store the client ID and use PKCE for every authorization request. Direct standards-aware clients may instead use the advertised `/api/auth/oauth2/register` endpoint with the equivalent RFC 7591 fields.
 
 ## Claim
 
-There is no agent claim ceremony, user code, verification URI, or claim endpoint. If a person wants saved or personalized features, hand off to <https://art.jpamorgan.com/login> so they can use the interactive application directly.
+Generate a high-entropy PKCE verifier and its `S256` challenge. Open the advertised authorization endpoint with `response_type=code`, the registered `client_id` and exact `redirect_uri`, `scope=offline_access art:read`, `state`, `code_challenge`, and `code_challenge_method=S256`. Hand the resulting Art login and consent pages to the person. The person authenticates on the Art domain and approves the scopes; never ask them to paste a password, session cookie, or authorization code into the agent conversation.
+
+After approval, Art redirects to the registered URI with `code`, the original `state`, and `iss=https://api.art.jpamorgan.com`. Verify both `state` and `iss` before exchanging the one-time code. This interactive authorization is the ownership and consent step; there is no separate `claim_token`, `user_code`, or polling ceremony.
 
 ## Use the credential
 
-No credential is issued. Connect a Streamable HTTP MCP client to the endpoint declared in the server card and call `browse_art`. Requests are read-only; respect the documented limit and filter values. Canonical artwork links in results point back to the public website.
+Exchange the code at the discovered token endpoint using form encoding:
+
+```http
+POST /api/auth/oauth2/token HTTP/1.1
+Host: api.art.jpamorgan.com
+Content-Type: application/x-www-form-urlencoded
+```
+
+```text
+grant_type=authorization_code&client_id=<client_id>&code=<code>&code_verifier=<verifier>&redirect_uri=<exact_redirect_uri>&resource=https%3A%2F%2Fapi.art.jpamorgan.com%2Fagent%2Fcatalog
+```
+
+Send the resulting access token only in `Authorization: Bearer <access_token>` to `https://api.art.jpamorgan.com/agent/catalog`. The resource supports `limit` (1–48), `sort` (`recent`, `title`, or `artist`), optional lowercase `category`, `style`, `gallery`, and `artist` slug filters, and the opaque `cursor` returned by the prior page. The JWT must have issuer `https://api.art.jpamorgan.com`, include the protected resource in `aud`, and contain `art:read` in `scope`. Use the refresh token at the same token endpoint with `grant_type=refresh_token`, `client_id`, `refresh_token`, and the same `resource`; replace the old refresh token after every successful rotation.
 
 ## Errors
 
-Treat an MCP protocol error or an HTTP `4xx` response as a request or compatibility problem; correct the request instead of attempting login. Retry transient `5xx` responses with bounded exponential backoff. A `401` on another API route does not authorize an agent to reuse a person's cookies, and agents should not attempt to bypass that boundary.
+Treat `invalid_request`, `invalid_client`, `invalid_scope`, `invalid_grant`, and PKCE failures as terminal for that request; correct the input instead of retrying unchanged. A protected-resource `401` with `error="invalid_token"` means the token is malformed, expired, revoked, or has the wrong issuer or audience. A `403` with `error="insufficient_scope"` means a valid token lacks `art:read`; start a new authorization with that scope. Restart authorization if refresh fails. Retry a transient `503` only with bounded exponential backoff and honor `Retry-After`. Never send browser cookies to an agent endpoint.
 
 ## Revocation
 
-There is no public agent credential to revoke. A person can manage their own browser session through the website. If Art later introduces agent credentials, this document and standards-based discovery metadata will be updated together before agents are expected to use them.
+Revoke a refresh or access token at `https://api.art.jpamorgan.com/api/auth/oauth2/revoke` with form fields `client_id`, `token`, and `token_type_hint` (`refresh_token` or `access_token`). A revoked access token is immediately denied by the protected catalog. Revoking a refresh token prevents future refreshes but does not revoke an already issued access token; revoke that access token separately or let its one-hour lifetime expire. Stop using revoked credentials, discard rotated predecessors, and begin a new PKCE authorization if access is needed later. Interactive browser sessions remain user-controlled and separate from agent credentials.

@@ -1,0 +1,45 @@
+{
+  "name": "Art by John Philip Morgan Catalog Agent",
+  "description": "A read-only agent for discovering physical artworks in the public Art by John Philip Morgan catalog.",
+  "supportedInterfaces": [
+    {
+      "url": "https://api.art.jpamorgan.com/a2a",
+      "protocolBinding": "JSONRPC",
+      "protocolVersion": "1.0",
+      "tenant": ""
+    }
+  ],
+  "provider": {
+    "organization": "Art by John Philip Morgan",
+    "url": "https://art.jpamorgan.com"
+  },
+  "version": "1.0.0",
+  "documentationUrl": "https://art.jpamorgan.com/llms.txt",
+  "capabilities": {
+    "streaming": true,
+    "pushNotifications": false,
+    "extendedAgentCard": false,
+    "extensions": []
+  },
+  "securitySchemes": {},
+  "securityRequirements": [],
+  "defaultInputModes": ["text/plain"],
+  "defaultOutputModes": ["text/plain", "application/json"],
+  "skills": [
+    {
+      "id": "browse-art-catalog",
+      "name": "Browse the public art catalog",
+      "description": "Browse and summarize curated physical artworks with optional artist, gallery, style, and category slug filters.",
+      "tags": ["art", "catalog", "artist", "gallery", "discovery"],
+      "examples": [
+        "Show me six recent artworks.",
+        "Find 4 works by artist:alice-neel.",
+        "Browse style:surrealism sorted by title."
+      ],
+      "inputModes": ["text/plain"],
+      "outputModes": ["text/plain", "application/json"],
+      "securityRequirements": []
+    }
+  ],
+  "signatures": []
+}

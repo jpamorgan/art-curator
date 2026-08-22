@@ -29,12 +29,14 @@ Each link above is a canonical Markdown fallback. Use the corresponding URL with
 
 ## Structured agent access
 
-Read the [MCP server card](https://art.jpamorgan.com/.well-known/mcp/server-card.json), then connect a client to the [Streamable HTTP MCP endpoint](https://api.art.jpamorgan.com/mcp) and call the read-only `browse_art` tool. `GET` describes the endpoint and `POST` accepts MCP JSON-RPC. The tool accepts an optional `limit` from 1 to 12, `sort` (`recent`, `title`, or `artist`), and `category`, `style`, `gallery`, or `artist` filters. Results contain concise artwork cards with canonical artwork links and may include an interactive MCP Apps view.
+For MCP, read the [MCP server card](https://art.jpamorgan.com/.well-known/mcp/server-card.json), connect to the [Streamable HTTP MCP endpoint](https://api.art.jpamorgan.com/mcp), and call the `browse_art` tool. For A2A v1.0 clients, read the [A2A Agent Card](https://art.jpamorgan.com/.well-known/agent-card.json) and send messages to the declared [JSON-RPC endpoint](https://api.art.jpamorgan.com/a2a). Both public surfaces are read-only and anonymous. They accept a bounded result limit, `recent`, `title`, or `artist` sorting, and optional category, style, gallery, or artist slug filters. Results contain concise artwork cards with canonical artwork links; MCP may also return an interactive MCP Apps view.
 
 Additional machine-readable entry points:
 
 - [AI catalog](https://art.jpamorgan.com/.well-known/ai-catalog.json)
 - [Agent Skills index](https://art.jpamorgan.com/.well-known/agent-skills/index.json)
 - [Agent access policy](https://art.jpamorgan.com/auth.md)
+- [OAuth protected-resource metadata](https://api.art.jpamorgan.com/.well-known/oauth-protected-resource)
+- [OAuth authorization-server metadata](https://api.art.jpamorgan.com/.well-known/oauth-authorization-server)
 
-Prefer `browse_art` when selecting or comparing catalog entries. Public catalog access needs no authentication. Saved works, follows, submissions, and personalized feeds are browser-session features and must be handed off to the person using the site.
+Prefer `browse_art` or the A2A catalog skill when selecting or comparing public entries. Agents that need the protected JSON catalog can follow `auth.md` to dynamically register a public OAuth client and obtain an `art:read` token through authorization code plus PKCE. Saved works, follows, submissions, and personalized feeds remain browser-session features and must be handed off to the person using the site.

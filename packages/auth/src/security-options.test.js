@@ -32,6 +32,10 @@ describe("Better Auth security options", () => {
       max: 100,
       customRules: {
         "/get-session": false,
+        "/oauth2/register": {
+          window: 3600,
+          max: 20,
+        },
       },
     });
   });

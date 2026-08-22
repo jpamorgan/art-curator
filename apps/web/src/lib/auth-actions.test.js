@@ -80,6 +80,28 @@ describe("authentication navigation", () => {
     expect(navigated).toBe(false);
   });
 
+  test("leaves a validated OAuth login redirect to the auth client's navigation hook", async () => {
+    const calls = [];
+    const error = await authenticateAndNavigate({
+      authenticate: async () => ({
+        error: null,
+        data: { redirect: true, url: "https://art.jpamorgan.com/oauth/consent?signed=true" },
+      }),
+      confirmSession: async () => {
+        calls.push("confirm-session");
+        return true;
+      },
+      fallbackError: "Unable to log in.",
+      navigate: async () => {
+        calls.push("navigate");
+      },
+      returnTo: "/favorites",
+    });
+
+    expect(error).toBeNull();
+    expect(calls).toEqual([]);
+  });
+
   test("does not navigate until an authoritative session read succeeds", async () => {
     const reads = [false, false, true];
     const calls = [];
