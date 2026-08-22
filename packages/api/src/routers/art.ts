@@ -299,34 +299,36 @@ function nextFeedCursor(row: ArtworkRow, sort: ArtworkListInput["sort"]): string
   });
 }
 
+export async function listArtworkCards(db: Database, input: ArtworkListInput, userId?: string) {
+  const conditions = filterConditions(db, input);
+  if (input.cursor) {
+    conditions.push(cursorCondition(decodeFeedCursor(input.cursor, input.sort)));
+  }
+
+  const rows = await db
+    .select(artworkSelection)
+    .from(artwork)
+    .innerJoin(gallery, eq(artwork.galleryId, gallery.id))
+    .where(and(...conditions))
+    .orderBy(...feedOrder(input.sort))
+    .limit(input.limit + 1);
+
+  const hasNextPage = rows.length > input.limit;
+  const pageRows = rows.slice(0, input.limit);
+  const items = await hydrateCards(db, pageRows, userId);
+  const lastRow = pageRows.at(-1);
+
+  return {
+    items,
+    nextCursor: hasNextPage && lastRow ? nextFeedCursor(lastRow, input.sort) : null,
+  };
+}
+
 export const artworksRouter = {
   list: publicProcedure
     .input(artworkListInputSchema)
     .output(artworkPageSchema)
-    .handler(async ({ context, input }) => {
-      const conditions = filterConditions(context.db, input);
-      if (input.cursor) {
-        conditions.push(cursorCondition(decodeFeedCursor(input.cursor, input.sort)));
-      }
-
-      const rows = await context.db
-        .select(artworkSelection)
-        .from(artwork)
-        .innerJoin(gallery, eq(artwork.galleryId, gallery.id))
-        .where(and(...conditions))
-        .orderBy(...feedOrder(input.sort))
-        .limit(input.limit + 1);
-
-      const hasNextPage = rows.length > input.limit;
-      const pageRows = rows.slice(0, input.limit);
-      const items = await hydrateCards(context.db, pageRows, context.session?.user.id);
-      const lastRow = pageRows.at(-1);
-
-      return {
-        items,
-        nextCursor: hasNextPage && lastRow ? nextFeedCursor(lastRow, input.sort) : null,
-      };
-    }),
+    .handler(({ context, input }) => listArtworkCards(context.db, input, context.session?.user.id)),
 
   bySlug: publicProcedure
     .input(browseSlugInputSchema)

@@ -13,6 +13,8 @@
     "@art/auth": "workspace:*",
     "@art/db": "workspace:*",
     "@art/env": "workspace:*",
+    "@modelcontextprotocol/ext-apps": "^1.7.5",
+    "@modelcontextprotocol/sdk": "^1.30.0",
     "@orpc/openapi": "catalog:",
     "@orpc/server": "catalog:",
     "@orpc/zod": "catalog:",

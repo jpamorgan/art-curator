@@ -1,4 +1,5 @@
 import { createContext } from "@art/api/context";
+import { listArtworkCards } from "@art/api/routers/art";
 import { appRouter } from "@art/api/routers/index";
 import { createAuth } from "@art/auth";
 import { authSecurityOptions } from "@art/auth/security-options";
@@ -25,6 +26,7 @@ import {
   type EnrichmentJob,
 } from "./enrichment";
 import { createEnrichmentProvider } from "./enrichment-provider";
+import { handleMcpRequest } from "./mcp";
 import { handleSeedArtifactSyncRequest } from "./seed-artifacts";
 import { favoriteMutationGuard, mutationOriginGuard } from "./security";
 import {
@@ -46,9 +48,54 @@ app.use(
   cors({
     origin: env.CORS_ORIGIN,
     allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-    allowHeaders: ["Content-Type", "Authorization"],
+    allowHeaders: [
+      "Content-Type",
+      "Authorization",
+      "MCP-Protocol-Version",
+      "Mcp-Session-Id",
+      "Last-Event-ID",
+    ],
+    exposeHeaders: ["MCP-Protocol-Version", "Mcp-Session-Id"],
     credentials: true,
   }),
+);
+
+app.post("/mcp", (c) =>
+  handleMcpRequest(c.req.raw, {
+    assetOrigin: env.BETTER_AUTH_URL,
+    async browseArt(input) {
+      const page = await listArtworkCards(createDb(), {
+        limit: input.limit,
+        sort: input.sort,
+        category: input.category,
+        style: input.style,
+        gallery: input.gallery,
+        artist: input.artist,
+      });
+      return page.items.map((artwork) => ({
+        slug: artwork.slug,
+        title: artwork.title,
+        artist: artwork.artist,
+        date: artwork.date,
+        gallery: artwork.gallery,
+        category: artwork.category,
+        styles: artwork.styles.map((style) => style.name),
+        url: new URL(`/art/${artwork.slug}`, "https://art.jpamorgan.com").href,
+        thumbnailUrl: artwork.thumbnailUrl,
+        alt: artwork.alt,
+      }));
+    },
+  }),
+);
+app.on(["GET", "DELETE"], "/mcp", () =>
+  Response.json(
+    {
+      jsonrpc: "2.0",
+      error: { code: -32000, message: "Method not allowed. Send MCP requests with POST." },
+      id: null,
+    },
+    { status: 405, headers: { Allow: "POST" } },
+  ),
 );
 
 app.on(["GET", "HEAD"], "/artifacts/:artworkId/:filename", (c) => {

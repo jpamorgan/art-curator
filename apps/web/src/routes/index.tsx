@@ -52,12 +52,26 @@ export const Route = createFileRoute("/")({
   },
   head: () => ({
     meta: [
-      { title: "Discover — Art" },
+      { title: "Art by John Philip Morgan — Personal Art Discovery" },
       {
         name: "description",
-        content: "Explore the catalog or discover artwork selected around your favorites.",
+        content:
+          "Explore John Philip Morgan's personal catalog of physical art, artists, galleries, and styles.",
       },
+      { name: "author", content: "John Philip Morgan" },
+      { name: "application-name", content: "Art by John Philip Morgan" },
+      { name: "robots", content: "index, follow" },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: "Art by John Philip Morgan" },
+      { property: "og:title", content: "Art by John Philip Morgan" },
+      {
+        property: "og:description",
+        content: "A personal catalog for discovering physical art, artists, galleries, and styles.",
+      },
+      { property: "og:url", content: "https://art.jpamorgan.com/" },
+      { name: "twitter:card", content: "summary" },
     ],
+    links: [{ rel: "canonical", href: "https://art.jpamorgan.com/" }],
   }),
   pendingComponent: GalleryPageSkeleton,
   errorComponent: () => (

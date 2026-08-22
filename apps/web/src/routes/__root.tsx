@@ -11,6 +11,7 @@ import {
 import Header from "@/components/header";
 import PrivateSessionBoundary from "@/components/private-session-boundary";
 import { getUser } from "@/functions/get-user";
+import { SiteIdentityScript } from "@/lib/site-identity";
 import type { orpc } from "@/utils/orpc";
 
 import appCss from "../index.css?url";
@@ -41,6 +42,7 @@ function RootDocument({ children }: { children: React.ReactNode }) {
     <html lang="en" className="antialiased">
       <head>
         <HeadContent />
+        <SiteIdentityScript />
       </head>
       <body>
         <a

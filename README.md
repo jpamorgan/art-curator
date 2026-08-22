@@ -93,6 +93,37 @@ Recommendation impressions and opens are recorded with opaque recommendation tok
 Saved works and follows are positive signals; **Not for me** supplies explicit negative
 signals. No user identifiers are written to Analytics Engine.
 
+## MCP Apps
+
+The public, no-auth MCP server is available at
+`https://api.art.jpamorgan.com/mcp`. Its read-only `browse_art` tool returns a concise
+selection from the same catalog query used by the web app and renders a portable MCP Apps
+gallery. Filters accept existing category, style, gallery, and artist slugs.
+
+For local inspection, start the app, then point MCP Inspector at the Streamable HTTP URL
+`http://localhost:3000/mcp`:
+
+```bash
+bun run dev
+npx @modelcontextprotocol/inspector
+```
+
+The endpoint accepts MCP JSON-RPC over `POST`. This direct call exercises the tool without a
+host UI:
+
+```bash
+curl --silent --show-error http://localhost:3000/mcp \
+  --request POST \
+  --header 'Accept: application/json, text/event-stream' \
+  --header 'Content-Type: application/json' \
+  --data '{"jsonrpc":"2.0","id":1,"method":"tools/call","params":{"name":"browse_art","arguments":{"limit":6,"sort":"recent"}}}'
+```
+
+To test the widget in ChatGPT, expose port 3000 through a public HTTPS tunnel, enable
+Developer mode under **Settings → Apps & Connectors → Advanced settings**, create an app
+using the tunnel URL plus `/mcp`, and refresh the app after changing tool or resource
+metadata.
+
 ## Deploy
 
 ```bash
