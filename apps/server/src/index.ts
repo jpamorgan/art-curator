@@ -40,12 +40,6 @@ const enrichmentConfig = resolveEnrichmentModelConfig({
   ENRICHMENT_EMBEDDING_MODEL: env.ENRICHMENT_EMBEDDING_MODEL,
   ENRICHMENT_PROMPT_VERSION: env.ENRICHMENT_PROMPT_VERSION,
 });
-const enrichmentProvider = createEnrichmentProvider({
-  config: enrichmentConfig,
-  workersAi: env.AI,
-  openAiApiKey: env.OPENAI_API_KEY,
-});
-
 app.use(logger());
 app.use(
   "/*",
@@ -207,7 +201,11 @@ export default {
       analytics: env.RECOMMENDATION_ANALYTICS,
       bucket: env.ARTWORKS,
       database: env.DB,
-      provider: enrichmentProvider,
+      provider: createEnrichmentProvider({
+        config: enrichmentConfig,
+        workersAi: env.AI,
+        openAiApiKey: env.OPENAI_API_KEY,
+      }),
       vectorIndex: env.ARTWORK_VECTORS,
     });
   },
